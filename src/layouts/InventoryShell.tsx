@@ -1,0 +1,136 @@
+import { ReactNode, useCallback, useState } from 'react';
+import { Icon, IconButton } from '../library';
+import { ThemeMode } from '../theme/theme';
+import { AppPage, AppUser } from '../types/inventory';
+import { getInitials, getRoleLabel } from '../utils/inventory';
+import { SideNav } from './SideNav';
+
+const pageDetails: Record<AppPage, { label: string; description: string }> = {
+  dashboard: {
+    label: 'Visão geral',
+    description: 'Acompanhe o panorama do patrimônio operacional.',
+  },
+  inventory: {
+    label: 'Estoque patrimonial',
+    description: 'Consulte bens, estados físicos e pendências administrativas.',
+  },
+};
+
+const navigation = [
+  { id: 'dashboard', href: '#dashboard', icon: 'dashboard', label: 'Visão geral' },
+  { id: 'inventory', href: '#inventory', icon: 'archive', label: 'Estoque patrimonial' },
+] as const;
+
+export type InventoryShellProps = {
+  user: AppUser;
+  page: AppPage;
+  onNavigate: (page: AppPage) => void;
+  onLogout: () => void;
+  onExportAll: () => void;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
+  children: ReactNode;
+};
+
+export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, theme, onToggleTheme, children }: InventoryShellProps) {
+  const [sideNavVisible, setSideNavVisible] = useState(false);
+  const [sideNavClosing, setSideNavClosing] = useState(false);
+
+  const closeSideNav = useCallback(() => {
+    setSideNavClosing(true);
+  }, []);
+
+  const finishClosingSideNav = useCallback(() => {
+    setSideNavVisible(false);
+    setSideNavClosing(false);
+  }, []);
+
+  const toggleSideNav = () => {
+    if (sideNavVisible && !sideNavClosing) {
+      closeSideNav();
+      return;
+    }
+
+    setSideNavClosing(false);
+    setSideNavVisible(true);
+  };
+
+  const handleNavigate = (nextPage: AppPage) => {
+    onNavigate(nextPage);
+    if (sideNavVisible) {
+      closeSideNav();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <header className="fixed inset-x-0 top-0 z-30 h-16 border-b border-slate-800 bg-slate-950 text-slate-100 shadow-lg shadow-slate-950/20">
+        <div className="relative mx-auto flex h-full w-full items-center px-4 sm:px-6 lg:px-10">
+          <div className="flex items-center gap-2">
+            <IconButton
+              label={sideNavVisible && !sideNavClosing ? 'Fechar navegação' : 'Abrir navegação'}
+              aria-controls="inventory-side-navigation"
+              aria-expanded={sideNavVisible && !sideNavClosing}
+              onClick={toggleSideNav}
+              className="border-transparent text-slate-300 hover:bg-white/10 hover:text-white"
+            >
+              <Icon name={sideNavVisible && !sideNavClosing ? 'close' : 'menu'} className="h-5 w-5" />
+            </IconButton>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white sm:hidden">
+              <Icon name="flame" className="h-4 w-4" />
+            </div>
+            <div className="hidden items-center gap-3 sm:flex">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white">
+                <Icon name="flame" className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold tracking-[0.18em] text-white">CBM SP</p>
+                <p className="text-[10px] text-slate-500">Gestão patrimonial</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 sm:flex">
+            <span className="font-semibold tracking-tight text-white">{pageDetails[page].label}</span>
+            <span className="h-1 w-1 rounded-full bg-primary" />
+            <span className="text-xs text-slate-500">Protótipo local</span>
+          </div>
+
+          <div className="ml-auto flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-xs font-semibold text-white">{user.name}</p>
+              <p className="text-[10px] text-slate-500">{getRoleLabel(user.role)}</p>
+            </div>
+            <IconButton
+              label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              onClick={onToggleTheme}
+              className="border-transparent text-slate-400 hover:bg-white/10 hover:text-white"
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} className="h-4 w-4" />
+            </IconButton>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">{getInitials(user)}</div>
+          </div>
+        </div>
+      </header>
+
+      <div aria-hidden="true" className="h-16 shrink-0" />
+      <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-4rem)] px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-9">
+        {children}
+      </main>
+
+      <SideNav
+        isClosing={sideNavClosing}
+        isVisible={sideNavVisible}
+        navigation={navigation}
+        navigationLabel="Navegação principal"
+        user={user}
+        onClose={closeSideNav}
+        onClosed={finishClosingSideNav}
+        onLogout={onLogout}
+        onExportAll={onExportAll}
+        onNavigate={handleNavigate}
+        page={page}
+      />
+    </div>
+  );
+}

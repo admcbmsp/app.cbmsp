@@ -1,3 +1,27 @@
+# CBM SP — Almoxarifado patrimonial
+
+Protótipo navegável de controle de bens permanentes do Corpo de Bombeiros, com dados locais, 140 patrimônios importados da planilha de salvamento e três perfis demonstrativos.
+
+O protótipo inclui aprovação de novos patrimônios, status `active`, `pending`, `rejected` e `deactivated`, status operacional conforme I-23-PM, cidade/unidade, histórico por item, `lastTimeTouched`, tabela configurável e exportação CSV/PDF. A interface usa uma paleta semântica com azul como `primary`, vermelho reservado para erro/rejeição, tema claro/escuro e um registro único de ícones no padrão Lucide.
+
+Os primitivos reutilizáveis ficam em `src/library`, os tokens de tema em `src/styles/theme-palette.css` e a tipografia em `src/styles/typography.css`. O tema pode ser alternado pelo ícone no topo após o login; a preferência é mantida em `localStorage`.
+
+## Acesso ao protótipo
+
+Todos os usuários usam a senha `123456`:
+
+- `reader@cbmsp.test` — consulta somente itens ativos.
+- `almoxarife@cbmsp.test` — consulta, cria itens pendentes e edita quantidade, condição operacional e cidade/unidade.
+- `adm@cbmsp.test` — aprova/rejeita pendências, cria itens ativos e controla os status.
+
+As alterações ficam apenas na memória do navegador e são perdidas ao recarregar a página.
+
+## Scripts disponíveis
+
+Use `npm start` para iniciar a aplicação localmente, `npm test -- --watchAll=false --runInBand` para executar os testes e `npm run build` para gerar a versão de produção.
+
+---
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

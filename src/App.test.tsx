@@ -1,9 +1,205 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from './App';
+import { inventorySeed } from './data/inventory';
+import { patrimonioSalvamentoNumbers } from './data/patrimonySalvamento';
 
-test('renders learn react link', () => {
+beforeEach(() => {
+  window.localStorage.removeItem('cbmsp-theme');
+  document.documentElement.classList.remove('dark');
+  document.documentElement.style.colorScheme = 'light';
+});
+
+const loginAs = (userName: RegExp) => {
+  fireEvent.click(screen.getByRole('button', { name: userName }));
+  fireEvent.click(screen.getByRole('button', { name: /entrar no prot/i }));
+};
+
+const logoutFromSideNav = () => {
+  fireEvent.click(screen.getByRole('button', { name: /abrir navega/i }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sair' }));
+};
+
+const openInventory = async () => {
+  fireEvent.click(screen.getByRole('button', { name: /abrir navega/i }));
+  fireEvent.click(screen.getByRole('link', { name: /estoque patrimonial/i }));
+  await waitFor(() => expect(screen.getByRole('main')).not.toHaveAttribute('aria-hidden'));
+};
+
+test('loads the planned mock inventory size', () => {
+  expect(inventorySeed).toHaveLength(patrimonioSalvamentoNumbers.length);
+  expect(inventorySeed.map((item) => item.nrPatrimonio)).toEqual([...patrimonioSalvamentoNumbers]);
+  expect(inventorySeed.every((item) => item.uuid && item.status)).toBe(true);
+});
+
+test('allows repeated descriptions with unique patrimony numbers', () => {
+  const rescueVehicles = inventorySeed.filter((item) => item.description === 'Viatura de Resgate e Salvamento');
+  const patrimonies = new Set(rescueVehicles.map((item) => item.nrPatrimonio));
+  const good = rescueVehicles.filter((item) => item.state === 'bom');
+  const regular = rescueVehicles.filter((item) => item.state === 'regular');
+
+  expect(rescueVehicles).toHaveLength(6);
+  expect(patrimonies.size).toBe(rescueVehicles.length);
+  expect(good).toHaveLength(3);
+  expect(regular).toHaveLength(3);
+});
+
+test('renders the prototype login screen', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /entrar no almoxarifado/i })).toBeInTheDocument();
+  expect(screen.getByText(/acesso rápido por perfil/i)).toBeInTheDocument();
+});
+
+test('reader can access the stock but cannot create items', () => {
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: /mariana costa/i }));
+  fireEvent.click(screen.getByRole('button', { name: /entrar no protótipo/i }));
+  fireEvent.click(screen.getByRole('button', { name: /abrir navegação/i }));
+  fireEvent.click(screen.getByRole('link', { name: /estoque patrimonial/i }));
+
+  expect(screen.getByText('Bens cadastrados')).toBeInTheDocument();
+  expect(screen.getByText(/resultado\(s\)/i)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /novo item/i })).not.toBeInTheDocument();
+});
+
+test('suggests descriptions after three letters and summarizes the selected description', async () => {
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: /mariana costa/i }));
+  fireEvent.click(screen.getByRole('button', { name: /entrar no protótipo/i }));
+  fireEvent.click(screen.getByRole('button', { name: /abrir navegação/i }));
+  fireEvent.click(screen.getByRole('link', { name: /estoque patrimonial/i }));
+  await waitFor(() => expect(screen.getByRole('main')).not.toHaveAttribute('aria-hidden'));
+
+  const search = screen.getByLabelText(/descrição ou patrimônio/i);
+  fireEvent.change(search, { target: { value: 'Salv' } });
+
+  const suggestion = screen.getByRole('button', { name: /Viatura de Resgate e Salvamento 6 item/i });
+  expect(suggestion).toBeInTheDocument();
+  fireEvent.click(suggestion);
+
+  fireEvent.click(screen.getByRole('button', { name: /fazer resumo/i }));
+  const summary = screen.getByRole('region', { name: /resumo da busca/i });
+
+  expect(within(summary).getByText('6')).toBeInTheDocument();
+  expect(within(summary).getByText('itens no total')).toBeInTheDocument();
+  expect(within(summary).getByText('Bom')).toBeInTheDocument();
+  expect(within(summary).getByText('Regular')).toBeInTheDocument();
+});
+
+test('admin sees the create action after login', () => {
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: /cap\. eduardo santos/i }));
+  fireEvent.click(screen.getByRole('button', { name: /entrar no protótipo/i }));
+
+  expect(screen.getAllByRole('button', { name: /novo item/i }).length).toBeGreaterThan(0);
+});
+
+test('almoxarife creates a pending item and sees the pending dashboard card', () => {
+  render(<App />);
+  loginAs(/rafael almeida/i);
+
+  fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
+  fireEvent.change(screen.getByLabelText(/descrição do item/i), { target: { value: 'Motosserra para aprovação' } });
+  fireEvent.change(screen.getByLabelText(/cidade\/unidade/i), { target: { value: 'EB ITA' } });
+  fireEvent.click(screen.getByRole('option', { name: 'EB ITAPIRA' }));
+  fireEvent.change(screen.getByLabelText(/valor unitário/i), { target: { value: '1000' } });
+  fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
+
+  expect(screen.getByText(/novo item criado como pendente/i)).toBeInTheDocument();
+  expect(screen.getByText('Motosserra para aprovação')).toBeInTheDocument();
+  expect(screen.getAllByText('Pendente').length).toBeGreaterThan(0);
+});
+
+test('city autocomplete limits suggestions and requires an offered city', () => {
+  render(<App />);
+  loginAs(/rafael almeida/i);
+  fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
+
+  const cityInput = screen.getByLabelText(/cidade\/unidade/i);
+  fireEvent.focus(cityInput);
+  fireEvent.change(cityInput, { target: { value: '' } });
+
+  const cityList = screen.getByRole('listbox');
+  expect(within(cityList).getAllByRole('option')).toHaveLength(4);
+
+  fireEvent.change(cityInput, { target: { value: 'EB ITA' } });
+  expect(within(screen.getByRole('listbox')).getByRole('option', { name: 'EB ITAPIRA' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('option', { name: 'EB ITAPIRA' }));
+  expect(cityInput).toHaveValue('EB ITAPIRA');
+});
+
+test('gestor approves a pending item and it becomes visible to the reader', async () => {
+  render(<App />);
+  loginAs(/rafael almeida/i);
+  fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
+  fireEvent.change(screen.getByLabelText(/descrição do item/i), { target: { value: 'Motosserra aprovada' } });
+  fireEvent.change(screen.getByLabelText(/valor unitário/i), { target: { value: '1000' } });
+  fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
+
+  logoutFromSideNav();
+  loginAs(/eduardo santos/i);
+  fireEvent.click(screen.getAllByRole('button', { name: /aprovar item/i })[0]);
+  expect(screen.getByText(/patrimônio aprovado/i)).toBeInTheDocument();
+
+  logoutFromSideNav();
+  loginAs(/mariana costa/i);
+  await openInventory();
+  fireEvent.change(screen.getByLabelText(/descrição ou patrimônio/i), { target: { value: 'Motosserra aprovada' } });
+
+  expect(screen.getAllByText('Motosserra aprovada').length).toBeGreaterThan(0);
+});
+
+test('gestor can reject a pending item and reader cannot consult it', async () => {
+  render(<App />);
+  loginAs(/rafael almeida/i);
+  fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
+  fireEvent.change(screen.getByLabelText(/descrição do item/i), { target: { value: 'Motosserra rejeitada' } });
+  fireEvent.change(screen.getByLabelText(/valor unitário/i), { target: { value: '1000' } });
+  fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
+
+  logoutFromSideNav();
+  loginAs(/eduardo santos/i);
+  fireEvent.click(screen.getAllByRole('button', { name: /rejeitar item/i })[0]);
+  expect(screen.getByText(/patrimônio rejeitado/i)).toBeInTheDocument();
+
+  logoutFromSideNav();
+  loginAs(/mariana costa/i);
+  await openInventory();
+  fireEvent.change(screen.getByLabelText(/descrição ou patrimônio/i), { target: { value: 'Motosserra rejeitada' } });
+
+  expect(screen.queryByText('Motosserra rejeitada')).not.toBeInTheDocument();
+});
+
+test('inventory offers history, operational status filtering and configurable columns', async () => {
+  render(<App />);
+  loginAs(/mariana costa/i);
+  await openInventory();
+
+  expect(screen.getAllByRole('button', { name: /ver histórico/i }).length).toBeGreaterThan(0);
+  fireEvent.click(screen.getAllByRole('button', { name: /ver histórico/i })[0]);
+  expect(screen.getByRole('heading', { name: /histórico de alterações/i })).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole('button', { name: /fechar histórico/i })[1]);
+
+  fireEvent.click(screen.getByRole('button', { name: /colunas/i }));
+  expect(screen.getByText('UUID')).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText('UUID'));
+  expect(screen.getByRole('columnheader', { name: 'UUID' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /exportar pdf/i })).toBeInTheDocument();
+});
+
+test('keeps logout in the side navigation and toggles the theme from the top bar', () => {
+  render(<App />);
+  loginAs(/mariana costa/i);
+
+  expect(screen.queryByRole('button', { name: 'Sair' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /ativar modo escuro/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /ativar modo escuro/i }));
+  expect(document.documentElement).toHaveClass('dark');
+  expect(screen.getByRole('button', { name: /ativar modo claro/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /ativar modo claro/i }));
+  expect(document.documentElement).not.toHaveClass('dark');
 });

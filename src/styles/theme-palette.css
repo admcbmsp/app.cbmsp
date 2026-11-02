@@ -1,0 +1,82 @@
+:root {
+  --color-background: #f4f7fb;
+  --color-foreground: #172033;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef3f8;
+  --color-border: #d9e2ec;
+  --color-muted: #64748b;
+  --color-primary: #2563eb;
+  --color-primary-strong: #1d4ed8;
+  --color-secondary: #475569;
+  --color-accent: #0f766e;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-error: #dc2626;
+  --color-error-soft: #fef2f2;
+  --color-hover: rgb(37 99 235 / 0.08);
+  --color-backdrop: rgb(15 23 42 / 0.58);
+  --color-focus: rgb(37 99 235 / 0.28);
+  --color-shadow: rgb(15 23 42 / 0.12);
+  color-scheme: light;
+}
+
+html.dark {
+  --color-background: #0b1220;
+  --color-foreground: #e5edf7;
+  --color-surface: #111c2e;
+  --color-surface-muted: #18263a;
+  --color-border: #2a3a50;
+  --color-muted: #94a3b8;
+  --color-primary: #63a6e9;
+  --color-primary-strong: #8bc2f4;
+  --color-secondary: #ac93e6;
+  --color-accent: #5eead4;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-error-soft: #3b171b;
+  --color-hover: rgb(255 255 255 / 0.1);
+  --color-backdrop: rgb(2 6 23 / 0.76);
+  --color-focus: rgb(99 166 233 / 0.35);
+  --color-shadow: rgb(2 6 23 / 0.46);
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  background: var(--color-background);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+::selection {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+/* Semantic fallbacks keep the existing prototype surfaces readable in dark mode. */
+html.dark .bg-white { background-color: var(--color-surface) !important; }
+html.dark .bg-slate-50,
+html.dark .bg-slate-100 { background-color: var(--color-surface-muted) !important; }
+html.dark .text-slate-950,
+html.dark .text-slate-900,
+html.dark .text-slate-800 { color: var(--color-foreground) !important; }
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-slate-500,
+html.dark .text-slate-400 { color: var(--color-muted) !important; }
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 { border-color: var(--color-border) !important; }
+html.dark .shadow-slate-200\/40 { --tw-shadow-color: var(--color-shadow) !important; }
+html.dark input,
+html.dark select,
+html.dark textarea { color: var(--color-foreground); }
