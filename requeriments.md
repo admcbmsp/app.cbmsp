@@ -2,7 +2,7 @@
 
 > Documento vivo para orientar a evolução do protótipo e a construção da aplicação real. Atualizar decisões e requisitos à medida que forem confirmados.
 >
-> Situação: rascunho · Atualizado em 03/11/2026 — filtros múltiplos, templates locais e diretrizes para portar a experiência web para React Native.
+> Situação: rascunho · Atualizado em 03/11/2026 — escopo global por unidade, filtros múltiplos, templates locais, tabelas configuráveis, identidade visual oficial e diretrizes para portar a experiência web para React Native.
 >
 > Plano de organização e limpeza incremental do código: [PLANO_REFATORACAO_CODIGO.md](PLANO_REFATORACAO_CODIGO.md).
 
@@ -24,10 +24,13 @@ O protótipo atual contém:
 - Visão geral com indicadores, pendências e movimentações recentes.
 - Consulta de patrimônio com busca, filtros, agrupamento por descrição e acesso aos exemplares individuais.
 - Templates locais por usuário para salvar e restaurar filtros e colunas da consulta.
+- Tabela individual de patrimônios com colunas configuráveis, ordenação por valor e coluna de ações fixa no final.
+- Logotipo oficial CBM SP nas áreas de marca, ícone do navegador e identidade instalada; cantos dos componentes com raio mais contido.
 - Cadastro e edição de patrimônios.
 - Aprovação e rejeição administrativa.
 - Lista administrativa de usuários e edição do perfil de acesso.
 - Perfil pessoal para cada usuário, com edição dos próprios dados de identificação e contato.
+- Seletor global de unidade na navegação lateral, aplicado às telas de patrimônio, indicadores, pendências, usuários e exportações.
 - Histórico de alterações por patrimônio.
 - Exportação CSV e relatórios para impressão/salvamento como PDF.
 - Perfis de leitor, almoxarife e administrador.
@@ -102,6 +105,18 @@ Todos os usuários autenticados devem ter acesso ao botão **Perfil** na navega�
 
 O usuário deve poder salvar localmente uma consulta nomeada com seus filtros e colunas selecionadas, aplicar um template salvo, atualizá-lo, renomeá-lo e excluí-lo. Aplicar um template restaura filtros e colunas; na web, os filtros restaurados também devem ser refletidos na URL. Um template padrão por usuário deve ser aplicado automaticamente ao entrar na consulta quando a URL não especificar filtros; o primeiro template salvo se torna o padrão, e aplicar outro template troca o padrão. Templates devem ser separados por usuário e conter uma versão do esquema para permitir evolução dos dados. Não devem guardar dados patrimoniais nem credenciais.
 
+### RC-15 — Tabelas configuráveis
+
+Na tabela de exemplares, o usuário deve poder mostrar ou ocultar colunas disponíveis, mudar a ordem das colunas e ordenar as linhas em ordem crescente ou decrescente pelo valor da coluna. A última coluna deve conter um botão de três pontos que abre o menu de ações disponíveis para aquele registro, respeitando o perfil do usuário. A coluna de ações permanece visível e sempre é a última. A coluna Número de patrimônio também é obrigatória. A ordem de colunas configurada deve ser usada na tabela e nas exportações, e incluída nos templates de consulta.
+
+### RC-16 — Identidade visual e adaptação mobile
+
+A interface deve usar o arquivo vetorial oficial `cbmsp.svg` sem alterar suas cores ou proporções. Cartões, campos, botões, menus e diálogos devem usar apenas os raios compartilhados `sm` (2 px) ou `md` (4 px); círculos ficam reservados a indicadores, controles circulares e avatares. A versão React Native deve reutilizar o mesmo vetor por um recurso de exibição SVG compatível com a plataforma e mapear os mesmos tokens de raio.
+
+### RC-17 — Escopo global por unidade
+
+O usuário deve poder selecionar a unidade de atuação pela navegação lateral. A seleção limita indicadores, movimentações, pendências, consulta de patrimônio, usuários e exportações aos registros relacionados à unidade escolhida, e permanece ativa ao navegar entre telas. A unidade atribuída ao perfil deve ser o escopo inicial; quando o perfil não tiver unidade definida, o protótipo começa em **Todas as unidades**. Na web, a seleção deve ser serializada no parâmetro `unit` da URL (`unit=<unidade>` ou `unit=all`) e restaurada ao abrir ou recarregar o endereço. A API da aplicação real deve fornecer as unidades permitidas e impor o escopo no servidor; o filtro visual do protótipo não substitui autorização.
+
 ## 5. Jornadas do usuário
 
 ### Leitor — consultar um patrimônio
@@ -173,6 +188,7 @@ O usuário deve poder salvar localmente uma consulta nomeada com seus filtros e 
 - Compartilhar tipos, regras de domínio, formatação e modelo dos relatórios entre web e mobile sempre que forem independentes da plataforma.
 - Isolar recursos dependentes da plataforma em adaptadores específicos para web e React Native.
 - Implementar filtros e templates através de modelos e serviços TypeScript compartilháveis. O template deve guardar valores estáveis de filtro e chaves de coluna, não rótulos traduzidos nem estado de componente.
+- Manter a seleção global de unidade em uma regra de domínio independente da interface. Na web, a navegação serializa a unidade na URL; no React Native, um adaptador de navegação deve preservar o mesmo escopo em rotas e deep links.
 - Definir uma interface assíncrona de armazenamento local (listar, salvar, atualizar e excluir templates) e fornecer adaptadores web e nativo. `@react-native-async-storage/async-storage` é uma opção candidata para React Native e Web; confirmar compatibilidade com o bundler escolhido antes de adotá-la também no web app atual. Os componentes não devem depender diretamente da biblioteca de armazenamento.
 - Manter os templates locais associados ao usuário e versionar seu formato. Armazenamento local não sincroniza automaticamente templates entre navegadores ou dispositivos; sincronização futura requer serviço de backend.
 - Persistir a referência do template padrão por usuário. Ao iniciar a consulta sem parâmetros de filtro na URL, restaurar o template padrão; parâmetros explícitos da URL têm precedência. Aplicar um template escolhido atualiza a referência do padrão.

@@ -9,10 +9,12 @@ export type IconName =
   | 'arrow-down'
   | 'arrow-left'
   | 'arrow-right'
+  | 'arrow-up'
   | 'arrow-up-right'
   | 'briefcase'
   | 'calendar'
   | 'check'
+  | 'columns'
   | 'chevron-down'
   | 'chevron-left'
   | 'chevron-right'
@@ -34,6 +36,7 @@ export type IconName =
   | 'logout'
   | 'menu'
   | 'minus'
+  | 'more-horizontal'
   | 'moon'
   | 'plus'
   | 'search'
@@ -53,10 +56,12 @@ const iconPaths: Record<IconName, ReactNode> = {
   'arrow-down': <path d="M12 5v14M6.5 13.5 12 19l5.5-5.5" />,
   'arrow-left': <path d="M19 12H5M10.5 6.5 5 12l5.5 5.5" />,
   'arrow-right': <path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5" />,
+  'arrow-up': <path d="M12 19V5M6.5 10.5 12 5l5.5 5.5" />,
   'arrow-up-right': <path d="M7 17 17 7M8 7h9v9" />,
   briefcase: <><rect x="3" y="7" width="18" height="12" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2" /></>,
   calendar: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 9h16M8 13h.01M12 13h.01M16 13h.01M8 16h.01M12 16h.01" /></>,
   check: <path d="m5 12 4 4L19 6" />,
+  columns: <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M9 4v16M15 4v16" /></>,
   'chevron-down': <path d="m6 9 6 6 6-6" />,
   'chevron-left': <path d="m15 6-6 6 6 6" />,
   'chevron-right': <path d="m9 6 6 6-6 6" />,
@@ -78,6 +83,7 @@ const iconPaths: Record<IconName, ReactNode> = {
   logout: <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" />,
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
   minus: <path d="M5 12h14" />,
+  'more-horizontal': <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,
   moon: <path d="M12 3a6.36 6.36 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
   plus: <path d="M12 5v14M5 12h14" />,
   search: <><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></>,

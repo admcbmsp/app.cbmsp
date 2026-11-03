@@ -18,7 +18,7 @@ const reportDesignTokens = `
     --report-accent: #c82e3d;
     --report-border: #d8e1e9;
     --report-surface: #f2f5f8;
-    --report-radius: 12px;
+    --report-radius: 4px;
   }
 `;
 

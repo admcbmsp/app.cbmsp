@@ -2,7 +2,7 @@ import { cn } from './cn';
 import { COLOR_TRANSITION_CLASS } from '../../theme/motion';
 
 export const fieldInputBaseClasses =
-  `h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none ${COLOR_TRANSITION_CLASS} placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`;
+  `h-11 w-full rounded-md border bg-white px-3.5 text-sm text-slate-900 outline-none ${COLOR_TRANSITION_CLASS} placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`;
 
 export const fieldInputStateClasses = {
   default: 'border-slate-200 focus:border-primary focus:ring-[var(--color-focus)]',

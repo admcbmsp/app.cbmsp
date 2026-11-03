@@ -19,7 +19,7 @@ export function CardBox({ padding = 'md', interactive = false, className, ...pro
     <div
       {...props}
       className={cn(
-        'rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/40',
+        'rounded-md border border-slate-200 bg-white shadow-sm shadow-slate-200/40',
         paddingClasses[padding],
         interactive && `${INTERACTION_TRANSITION_CLASS} hover:-translate-y-0.5 hover:border-primary hover:shadow-md hover:shadow-[var(--color-shadow)]`,
         className,

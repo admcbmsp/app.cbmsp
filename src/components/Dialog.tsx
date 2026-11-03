@@ -44,7 +44,7 @@ export function Dialog({
         aria-labelledby={labelledBy}
         padding="none"
         className={cn(
-          'relative w-full overflow-hidden rounded-3xl border-0 p-0 shadow-2xl',
+          'relative w-full overflow-hidden rounded-md border-0 p-0 shadow-2xl',
           dialogSizeClasses[size],
           panelClassName,
         )}

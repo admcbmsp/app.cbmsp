@@ -27,7 +27,7 @@ export function EditUserRoleModal({ user, onClose, onSave }: EditUserRoleModalPr
       </header>
 
       <div className="space-y-5 px-6 py-6">
-        <div className="rounded-2xl bg-slate-50 px-4 py-3">
+        <div className="rounded-md bg-slate-50 px-4 py-3">
           <p className="text-sm font-semibold text-slate-900">{user.name}</p>
           <p className="mt-1 break-all text-xs text-slate-500">{user.email}</p>
         </div>

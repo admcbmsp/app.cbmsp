@@ -5,7 +5,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'dan
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export const buttonBaseClasses =
-  `inline-flex items-center justify-center gap-2 rounded-xl border font-semibold ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50`;
+  `inline-flex items-center justify-center gap-2 rounded-md border font-semibold ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50`;
 
 export const buttonVariantClasses: Record<ButtonVariant, string> = {
   primary: 'border-primary bg-primary text-white hover:border-primary-strong hover:bg-primary-strong focus-visible:outline-primary',

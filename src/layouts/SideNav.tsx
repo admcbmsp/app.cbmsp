@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { BrandLogo } from '../components/BrandLogo';
+import { UnitScopeSelector } from '../components/UnitScopeSelector';
 import { Icon, IconButton, IconName, cn } from '../library';
 import { COLOR_TRANSITION_CLASS } from '../theme/motion';
-import { AppPage, AppUser } from '../types/inventory';
+import { AppPage, AppUser, City } from '../types/inventory';
 import { getInitials, getRoleLabel } from '../utils/inventory';
 
 const sideNavId = 'inventory-side-navigation';
@@ -20,6 +22,9 @@ export type SideNavProps = {
   navigation: ReadonlyArray<NavigationItem>;
   navigationLabel: string;
   user: AppUser;
+  selectedUnit: City | null;
+  unitOptions: readonly City[];
+  onSelectUnit: (unit: City | null) => void;
   onClose: () => void;
   onClosed: () => void;
   onExportAll: () => void;
@@ -34,6 +39,9 @@ export function SideNav({
   navigation,
   navigationLabel,
   user,
+  selectedUnit,
+  unitOptions,
+  onSelectUnit,
   onClose,
   onClosed,
   onExportAll,
@@ -152,9 +160,7 @@ export function SideNav({
       >
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-[var(--color-shadow)]">
-              <Icon name="flame" className="h-5 w-5" />
-            </div>
+            <BrandLogo className="h-10 w-10" />
             <div>
               <p className="text-sm font-bold tracking-[0.18em] text-white">CBM SP</p>
               <p className="text-xs text-slate-400">Almoxarifado</p>
@@ -165,7 +171,14 @@ export function SideNav({
           </IconButton>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+        <UnitScopeSelector
+          options={unitOptions}
+          selectedUnit={selectedUnit}
+          onChange={onSelectUnit}
+          onSelect={onClose}
+        />
+
+        <div className="mt-5 rounded-md border border-white/10 bg-white/[0.04] px-4 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Ambiente atual</p>
           <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-200">
             <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.1)]" />
@@ -191,7 +204,7 @@ export function SideNav({
                       onNavigate(item.id);
                       onClose();
                     }}
-                    className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-300 ${COLOR_TRANSITION_CLASS} hover:bg-white/10 hover:text-white active:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary aria-[current=page]:bg-primary aria-[current=page]:text-white aria-[current=page]:hover:bg-primary`}
+                    className={`flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-300 ${COLOR_TRANSITION_CLASS} hover:bg-white/10 hover:text-white active:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary aria-[current=page]:bg-primary aria-[current=page]:text-white aria-[current=page]:hover:bg-primary`}
                   >
                     <Icon name={item.icon} className="h-5 w-5 shrink-0" />
                     {item.label}
@@ -210,7 +223,7 @@ export function SideNav({
               onExportAll();
               onClose();
             }}
-            className={`flex min-h-11 w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-sm font-medium text-slate-300 ${COLOR_TRANSITION_CLASS} hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-sm font-medium text-slate-300 ${COLOR_TRANSITION_CLASS} hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
           >
             <Icon name="download" className="h-5 w-5 shrink-0" />
             Exportar almoxarifado
@@ -218,7 +231,7 @@ export function SideNav({
         </div>
 
         <div className="mt-auto border-t border-white/10 pt-5">
-          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+          <div className="flex items-center gap-3 rounded-md px-2 py-2">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-focus)] text-xs font-bold text-primary">{getInitials(user)}</div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{user.name}</p>

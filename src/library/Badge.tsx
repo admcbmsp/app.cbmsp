@@ -20,7 +20,7 @@ const variantClasses: Record<BadgeVariant, string> = {
 
 export function Badge({ variant = 'neutral', size = 'sm', dot = false, className, children, ...props }: BadgeProps) {
   return (
-    <span {...props} className={cn('inline-flex items-center gap-1.5 rounded-full font-semibold ring-1 ring-inset', size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm', variantClasses[variant], className)}>
+    <span {...props} className={cn('inline-flex items-center gap-1.5 rounded-md font-semibold ring-1 ring-inset', size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm', variantClasses[variant], className)}>
       {dot && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />}
       {children}
     </span>

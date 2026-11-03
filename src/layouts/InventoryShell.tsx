@@ -1,7 +1,8 @@
 import { ReactNode, useCallback, useState } from 'react';
+import { BrandLogo } from '../components/BrandLogo';
 import { Icon, IconButton } from '../library';
 import { ThemeMode } from '../theme/theme';
-import { AppPage, AppUser } from '../types/inventory';
+import { AppPage, AppUser, City } from '../types/inventory';
 import { getInitials, getRoleLabel } from '../utils/inventory';
 import { SideNav } from './SideNav';
 
@@ -43,12 +44,14 @@ export type InventoryShellProps = {
   onNavigate: (page: AppPage) => void;
   onLogout: () => void;
   onExportAll: () => void;
+  selectedUnit: City | null;
+  onSelectUnit: (unit: City | null) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
   children: ReactNode;
 };
 
-export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, theme, onToggleTheme, children }: InventoryShellProps) {
+export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, selectedUnit, onSelectUnit, theme, onToggleTheme, children }: InventoryShellProps) {
   const [sideNavVisible, setSideNavVisible] = useState(false);
   const [sideNavClosing, setSideNavClosing] = useState(false);
   const userNavigation = user.role === 'reader'
@@ -96,13 +99,9 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
             >
               <Icon name={sideNavVisible && !sideNavClosing ? 'close' : 'menu'} className="h-5 w-5" />
             </IconButton>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white sm:hidden">
-              <Icon name="flame" className="h-4 w-4" />
-            </div>
+            <BrandLogo className="h-10 w-10 sm:hidden" />
             <div className="hidden items-center gap-3 sm:flex">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white">
-                <Icon name="flame" className="h-4 w-4" />
-              </div>
+              <BrandLogo className="h-10 w-10" />
               <div>
                 <p className="text-xs font-bold tracking-[0.18em] text-white">CBM SP</p>
                 <p className="text-[10px] text-slate-500">Gestão patrimonial</p>
@@ -113,7 +112,7 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
           <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 sm:flex">
             <span className="font-semibold tracking-tight text-white">{currentPageLabel}</span>
             <span className="h-1 w-1 rounded-full bg-primary" />
-            <span className="text-xs text-slate-500">Protótipo local</span>
+            <span className="max-w-[30vw] truncate text-xs text-slate-400" title={`Unidade: ${selectedUnit ?? 'Todas as unidades'}`}>Unidade: {selectedUnit ?? 'Todas as unidades'}</span>
           </div>
 
           <div className="ml-auto flex items-center gap-3">
@@ -144,6 +143,9 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
         navigation={userNavigation}
         navigationLabel="Navegação principal"
         user={user}
+        selectedUnit={selectedUnit}
+        unitOptions={Object.values(City)}
+        onSelectUnit={onSelectUnit}
         onClose={closeSideNav}
         onClosed={finishClosingSideNav}
         onLogout={onLogout}

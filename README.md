@@ -2,7 +2,9 @@
 
 Protótipo navegável de controle de bens permanentes do Corpo de Bombeiros, com dados locais, 140 patrimônios importados da planilha de salvamento e três perfis demonstrativos.
 
-O protótipo inclui aprovação de novos patrimônios, status `active`, `pending`, `rejected` e `deactivated`, status operacional conforme I-23-PM, cidade/unidade, histórico por item, `lastTimeTouched`, tabela configurável e exportação CSV/PDF. A interface usa uma paleta semântica com azul como `primary`, vermelho reservado para erro/rejeição, tema claro/escuro e um registro único de ícones no padrão Lucide.
+O protótipo inclui aprovação de novos patrimônios, status `active`, `pending`, `rejected` e `deactivated`, status operacional conforme I-23-PM, cidade/unidade, histórico por item, `lastTimeTouched`, tabela configurável e exportação CSV/PDF. A interface usa o logotipo vetorial oficial `cbmsp.svg`, uma paleta semântica com azul como `primary`, vermelho reservado para erro/rejeição, tema claro/escuro, raios de 2 ou 4 px nos componentes e um registro único de ícones no padrão Lucide.
+
+A navegação lateral oferece um seletor global de unidade. Ele limita as telas, pendências, consulta de usuários e exportações à unidade selecionada, mantém a escolha entre páginas e a registra no parâmetro `unit` da URL. Perfis com unidade definida começam nesse escopo; contas demonstrativas sem unidade começam em “Todas as unidades”.
 
 Os primitivos reutilizáveis ficam em `src/library`, os tokens de tema em `src/styles/theme-palette.css` e a tipografia em `src/styles/typography.css`. O tema pode ser alternado pelo ícone no topo após o login; a preferência é mantida em `localStorage`.
 

@@ -2,8 +2,11 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import App from './App';
 import { inventorySeed } from './data/inventory';
 import { patrimonioSalvamentoNumbers } from './data/patrimonySalvamento';
+import { City } from './types/inventory';
+import { formatCurrency } from './utils/inventory';
 
 beforeEach(() => {
+  window.history.replaceState(window.history.state, '', '#/dashboard');
   window.localStorage.removeItem('cbmsp-theme');
   document.documentElement.classList.remove('dark');
   document.documentElement.style.colorScheme = 'light';
@@ -21,7 +24,7 @@ const logoutFromSideNav = () => {
 
 const openInventory = async () => {
   fireEvent.click(screen.getByRole('button', { name: /abrir navega/i }));
-  fireEvent.click(screen.getByRole('link', { name: /estoque patrimonial/i }));
+  fireEvent.click(screen.getByRole('link', { name: /consulta de ativos|controle de patrimônio|estoque patrimonial/i }));
   await waitFor(() => expect(screen.getByRole('main')).not.toHaveAttribute('aria-hidden'));
 };
 
@@ -56,7 +59,7 @@ test('reader can access the stock but cannot create items', () => {
   fireEvent.click(screen.getByRole('button', { name: /mariana costa/i }));
   fireEvent.click(screen.getByRole('button', { name: /entrar no protótipo/i }));
   fireEvent.click(screen.getByRole('button', { name: /abrir navegação/i }));
-  fireEvent.click(screen.getByRole('link', { name: /estoque patrimonial/i }));
+  fireEvent.click(screen.getByRole('link', { name: /consulta de ativos|controle de patrimônio|estoque patrimonial/i }));
 
   expect(screen.getByText('Bens cadastrados')).toBeInTheDocument();
   expect(screen.getByText(/resultado\(s\)/i)).toBeInTheDocument();
@@ -69,7 +72,7 @@ test('suggests descriptions after three letters and summarizes the selected desc
   fireEvent.click(screen.getByRole('button', { name: /mariana costa/i }));
   fireEvent.click(screen.getByRole('button', { name: /entrar no protótipo/i }));
   fireEvent.click(screen.getByRole('button', { name: /abrir navegação/i }));
-  fireEvent.click(screen.getByRole('link', { name: /estoque patrimonial/i }));
+  fireEvent.click(screen.getByRole('link', { name: /consulta de ativos|controle de patrimônio|estoque patrimonial/i }));
   await waitFor(() => expect(screen.getByRole('main')).not.toHaveAttribute('aria-hidden'));
 
   const search = screen.getByLabelText(/descrição ou patrimônio/i);
@@ -142,8 +145,10 @@ test('gestor approves a pending item and it becomes visible to the reader', asyn
 
   logoutFromSideNav();
   loginAs(/eduardo santos/i);
-  fireEvent.click(screen.getAllByRole('button', { name: /aprovar item/i })[0]);
-  expect(screen.getByText(/patrimônio aprovado/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /editar item pendente: Motosserra aprovada/i }));
+  fireEvent.change(screen.getByLabelText(/status administrativo/i), { target: { value: 'active' } });
+  fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
+  expect(screen.getByText(/registro atualizado com sucesso/i)).toBeInTheDocument();
 
   logoutFromSideNav();
   loginAs(/mariana costa/i);
@@ -163,8 +168,10 @@ test('gestor can reject a pending item and reader cannot consult it', async () =
 
   logoutFromSideNav();
   loginAs(/eduardo santos/i);
-  fireEvent.click(screen.getAllByRole('button', { name: /rejeitar item/i })[0]);
-  expect(screen.getByText(/patrimônio rejeitado/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /editar item pendente: Motosserra rejeitada/i }));
+  fireEvent.change(screen.getByLabelText(/status administrativo/i), { target: { value: 'rejected' } });
+  fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
+  expect(screen.getByText(/registro atualizado com sucesso/i)).toBeInTheDocument();
 
   logoutFromSideNav();
   loginAs(/mariana costa/i);
@@ -180,8 +187,8 @@ test('inventory offers history, operational status filtering and configurable co
   await openInventory();
 
   fireEvent.click(screen.getByRole('button', { name: 'Viatura de Resgate e Salvamento' }));
-  expect(screen.getAllByRole('button', { name: /ver histórico/i }).length).toBeGreaterThan(0);
-  fireEvent.click(screen.getAllByRole('button', { name: /ver histórico/i })[0]);
+  fireEvent.click(screen.getAllByRole('button', { name: /ações para viatura de resgate e salvamento/i })[0]);
+  fireEvent.click(screen.getByRole('menuitem', { name: /ver histórico/i }));
   expect(screen.getByRole('heading', { name: /histórico de alterações/i })).toBeInTheDocument();
   fireEvent.click(screen.getAllByRole('button', { name: /fechar histórico/i })[1]);
 
@@ -232,11 +239,43 @@ test('groups patrimonies by description and opens all units with their details',
   expect(screen.getAllByRole('columnheader')[0]).toHaveTextContent('Número de patrimônio');
   expect(screen.queryByRole('columnheader', { name: 'Quantidade' })).not.toBeInTheDocument();
   expect(screen.getByRole('columnheader', { name: 'Última movimentação' })).toBeInTheDocument();
-  expect(screen.getAllByRole('button', { name: 'Ver histórico' })).toHaveLength(6);
+  expect(screen.getAllByRole('button', { name: /ações para viatura de resgate e salvamento/i })).toHaveLength(6);
 
   fireEvent.click(screen.getByRole('button', { name: /voltar ao estoque patrimonial/i }));
   expect(screen.getByLabelText(/descrição ou patrimônio/i)).toHaveValue(vehicles[0].nrPatrimonio);
   expect(screen.getByRole('table', { name: 'Patrimônios por descrição' })).toBeInTheDocument();
+});
+
+test('applies the selected unit across the dashboard, inventory and URL', async () => {
+  render(<App />);
+  loginAs(/eduardo santos/i);
+
+  fireEvent.click(screen.getByRole('button', { name: /abrir navega/i }));
+  fireEvent.click(screen.getByRole('button', { name: /selecionar unidade/i }));
+  const unitOptions = screen.getByRole('group', { name: 'Unidade global' });
+  fireEvent.click(within(unitOptions).getByRole('button', { name: City.EB_HOLAMBRA }));
+
+  await waitFor(() => expect(window.location.hash).toContain('unit=EB+HOLAMBRA'));
+  await waitFor(() => expect(screen.getByRole('main')).not.toHaveAttribute('aria-hidden'));
+  await openInventory();
+
+  const unitItems = inventorySeed.filter((item) => item.cidade === City.EB_HOLAMBRA);
+  const expectedDescriptions = Array.from(new Set(unitItems.map((item) => item.description))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const inventoryTable = screen.getByRole('table', { name: 'Patrimônios por descrição' });
+  expect(within(inventoryTable).getAllByRole('rowheader').map((row) => row.textContent)).toEqual(expectedDescriptions);
+
+  fireEvent.click(screen.getByRole('button', { name: /abrir navega/i }));
+  fireEvent.click(screen.getByRole('link', { name: 'Visão geral' }));
+  await waitFor(() => expect(screen.getByRole('main')).not.toHaveAttribute('aria-hidden'));
+
+  const activeItems = unitItems.filter((item) => item.status === 'active');
+  const stockLabel = screen.getByText('Valor estimado do estoque');
+  const displayedStockValue = stockLabel.parentElement?.querySelectorAll('p')[1]?.textContent?.replace(/\u00a0/g, ' ');
+  expect(displayedStockValue).toBe(formatCurrency(activeItems.reduce((total, item) => total + item.valor, 0)).replace(/\u00a0/g, ' '));
+  const pendingSection = screen.getByText('Itens pendentes de aprovação').closest('section')!;
+  const pendingButtons = within(pendingSection).queryAllByRole('button');
+  expect(pendingButtons).toHaveLength(unitItems.filter((item) => item.status === 'pending').length);
+  pendingButtons.forEach((button) => expect(button).toHaveTextContent(City.EB_HOLAMBRA));
 });
 
 

@@ -1,5 +1,6 @@
 import {
   AppUser,
+  City,
   InventoryItem,
   ItemState,
   ItemStatus,
@@ -27,6 +28,9 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
 });
 
 export const formatDateTime = (value: string) => dateTimeFormatter.format(new Date(value));
+
+export const itemsForUnit = (items: InventoryItem[], unit: City | null) =>
+  unit ? items.filter((item) => item.cidade === unit) : items;
 
 export const visibleItemsForRole = (
   items: InventoryItem[],

@@ -40,7 +40,7 @@ export function UserManagementPage({ users, onSelectUser }: UserManagementPagePr
                 onClick={() => onSelectUser(user)}
                 className="flex min-h-[76px] w-full flex-wrap items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:flex-nowrap sm:px-6"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-hover)] text-primary">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--color-hover)] text-primary">
                   <Icon name="user" className="h-5 w-5" />
                 </span>
                 <span className="min-w-0 flex-1">

@@ -7,10 +7,13 @@ import {
   useState,
 } from 'react';
 import { Icon } from './components/Icon';
+import { BrandLogo } from './components/BrandLogo';
 import { Dialog } from './components/Dialog';
-import { OperationalStatusBadge, StateBadge, StatusBadge } from './components/inventory/StatusBadges';
+import { DynamicDataTable } from './components/DynamicDataTable';
+import type { TableAction } from './components/TableActionMenu';
 import { FilterDropdown } from './components/FilterDropdown';
 import { InventoryViewTemplates } from './components/InventoryViewTemplates';
+import { OperationalStatusBadge, StateBadge, StatusBadge } from './components/inventory/StatusBadges';
 import { EditUserRoleModal } from './components/users/EditUserRoleModal';
 import { Label as FieldLabel, SelectInput, TextInput } from './library';
 import { inventorySeed } from './data/inventory';
@@ -52,6 +55,7 @@ import {
   getTypeIcon,
   getTypeLabel,
   getUserDisplayName,
+  itemsForUnit,
   visibleItemsForRole,
 } from './utils/inventory';
 import { createCsvContent, downloadTextFile } from './utils/exports';
@@ -59,7 +63,6 @@ import type { ExportColumn } from './utils/exports';
 import {
   defaultInventoryColumns,
   getInventoryReportColumns,
-  inventoryColumnOptions,
 } from './services/inventoryReports';
 import type { InventoryColumnKey } from './services/inventoryReports';
 import { normalizeInventoryFilters } from './services/savedInventoryViews';
@@ -68,6 +71,7 @@ import { openPrintReport } from './services/printReport';
 import { applyTheme, getInitialTheme, ThemeMode } from './theme/theme';
 import { COLOR_TRANSITION_CLASS } from './theme/motion';
 import type { InventoryFilters } from './types/inventoryViews';
+import type { DynamicDataTableColumn } from './components/DynamicDataTable';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -94,6 +98,15 @@ type DashboardInventoryFilter =
 type AppRoute = {
   page: AppPage;
   filter: InventoryFilters | null;
+  unit: City | null;
+  hasUnit: boolean;
+};
+
+const parseUnitParameter = (params: URLSearchParams) => {
+  const value = params.get('unit');
+  if (value === 'all') return { unit: null, hasUnit: true };
+  if (cityOptions.includes(value as City)) return { unit: value as City, hasUnit: true };
+  return { unit: null, hasUnit: false };
 };
 
 const parseAppRoute = (hash: string): AppRoute => {
@@ -101,7 +114,8 @@ const parseAppRoute = (hash: string): AppRoute => {
   const routeName = (rawPath ?? '').replace(/^\/+/, '');
   const page: AppPage = routeName === 'inventory' || routeName === 'users' || routeName === 'profile' ? routeName : 'dashboard';
   if (page !== 'inventory') {
-    return { page, filter: null };
+    const params = new URLSearchParams(rawQuery);
+    return { page, filter: null, ...parseUnitParameter(params) };
   }
 
   const params = new URLSearchParams(rawQuery);
@@ -110,6 +124,7 @@ const parseAppRoute = (hash: string): AppRoute => {
   const operationalStatusFilters = Array.from(new Set(params.getAll('operationalStatus').filter((status): status is OperationalStatus => operationalStatuses.includes(status as OperationalStatus))));
   const types = Array.from(new Set(params.getAll('type').filter(Boolean)));
   const query = params.get('q') ?? '';
+  const unitSelection = parseUnitParameter(params);
   const filter: InventoryFilters = {
     ...(query ? { query } : {}),
     ...(types.length ? { types } : {}),
@@ -118,11 +133,13 @@ const parseAppRoute = (hash: string): AppRoute => {
     ...(operationalStatusFilters.length ? { operationalStatuses: operationalStatusFilters } : {}),
   };
 
-  return { page, filter: Object.keys(filter).length > 0 ? filter : null };
+  return { page, filter: Object.keys(filter).length > 0 ? filter : null, ...unitSelection };
 };
 
-const getAppRouteHash = (page: AppPage, filter: InventoryFilters | null = null) => {
+const getAppRouteHash = (page: AppPage, filter: InventoryFilters | null = null, unit?: City | null) => {
   const params = new URLSearchParams();
+  if (unit === null) params.set('unit', 'all');
+  else if (unit) params.set('unit', unit);
   if (page === 'inventory' && filter?.query) params.set('q', filter.query);
   if (page === 'inventory') filter?.types?.forEach((type) => params.append('type', type));
   if (page === 'inventory') filter?.statuses?.forEach((status) => params.append('status', status));
@@ -132,8 +149,8 @@ const getAppRouteHash = (page: AppPage, filter: InventoryFilters | null = null) 
   return `#/${page}${query ? `?${query}` : ''}`;
 };
 
-const updateAppRouteUrl = (page: AppPage, filter: InventoryFilters | null = null, replace = false) => {
-  const nextHash = getAppRouteHash(page, filter);
+const updateAppRouteUrl = (page: AppPage, filter: InventoryFilters | null = null, replace = false, unit?: City | null) => {
+  const nextHash = getAppRouteHash(page, filter, unit);
   if (window.location.hash === nextHash) return;
   if (replace) {
     window.history.replaceState(window.history.state, '', nextHash);
@@ -201,7 +218,7 @@ function Button({ children, variant = 'primary', className = '', ...props }: But
   return (
     <button
       {...props}
-      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
     >
       {children}
     </button>
@@ -219,7 +236,7 @@ function IconButton({
       {...props}
       aria-label={label}
       title={label}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${className}`}
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${className}`}
     >
       {children}
     </button>
@@ -254,12 +271,8 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
     <main className="min-h-screen overflow-hidden bg-[#0b1224] text-white">
       <div className="mx-auto grid min-h-screen max-w-[1500px] lg:grid-cols-[1.08fr_0.92fr]">
         <section className="relative hidden overflow-hidden px-12 py-12 lg:flex lg:flex-col lg:justify-between xl:px-20">
-          <div className="absolute -left-28 top-20 h-80 w-80 rounded-full bg-[var(--color-focus)] blur-3xl" />
-          <div className="absolute -bottom-20 right-10 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl" />
           <div className="relative flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-[var(--color-shadow)]">
-              <Icon name="flame" className="h-6 w-6" />
-            </div>
+            <BrandLogo className="h-12 w-12" />
             <div>
               <p className="text-sm font-bold tracking-[0.18em] text-white">CBM SP</p>
               <p className="text-xs text-slate-400">Gestão patrimonial</p>
@@ -280,7 +293,7 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
                 ['03', 'níveis de acesso'],
                 ['100%', 'dados locais'],
               ].map(([value, label]) => (
-                <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
+                <div key={label} className="rounded-md border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
                   <p className="text-2xl font-semibold text-white">{value}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-400">{label}</p>
                 </div>
@@ -291,12 +304,10 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
           <p className="relative text-xs text-slate-500">Ambiente demonstrativo · sem conexão com sistemas reais</p>
         </section>
 
-        <section className="flex min-h-screen items-center justify-center bg-slate-50 px-5 py-8 text-slate-900 sm:px-8 lg:rounded-l-[2.5rem] lg:px-16">
+        <section className="flex min-h-screen items-center justify-center bg-slate-50 px-5 py-8 text-slate-900 sm:px-8 lg:rounded-l-md lg:px-16">
           <div className="w-full max-w-md">
             <div className="mb-10 flex items-center gap-3 lg:hidden">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white">
-                <Icon name="flame" className="h-6 w-6" />
-              </div>
+              <BrandLogo className="h-12 w-12" />
               <div>
                 <p className="text-sm font-bold tracking-[0.18em] text-slate-900">CBM SP</p>
                 <p className="text-xs text-slate-500">Gestão patrimonial</p>
@@ -323,7 +334,7 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
               </div>
 
               {error && (
-                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">
+                <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">
                   {error}
                 </div>
               )}
@@ -342,13 +353,13 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
                     key={user.id}
                     type="button"
                     onClick={() => chooseDemoUser(user)}
-                    className={`flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left ${COLOR_TRANSITION_CLASS} hover:border-primary hover:bg-[var(--color-hover)]`}
+                    className={`flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3.5 py-3 text-left ${COLOR_TRANSITION_CLASS} hover:border-primary hover:bg-[var(--color-hover)]`}
                   >
                     <span>
                       <span className="block text-sm font-semibold text-slate-800">{user.name}</span>
                       <span className="mt-0.5 block text-xs text-slate-500">{user.email}</span>
                     </span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">{getRoleLabel(user.role)}</span>
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">{getRoleLabel(user.role)}</span>
                   </button>
                 ))}
               </div>
@@ -424,13 +435,13 @@ function DashboardPage({
 
       {user.role === 'adm' && (
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40">
+          <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Valor estimado do estoque</p>
                 <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">{formatCurrency(estimatedStockValue)}</p>
               </div>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Icon name="currency" className="h-5 w-5" /></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-50 text-blue-600"><Icon name="currency" className="h-5 w-5" /></span>
             </div>
             <p className="mt-4 text-xs text-slate-500">Soma do valor estimado de {formatQuantity(activeItems.length)} patrimônio(s) ativo(s).</p>
           </div>
@@ -438,7 +449,7 @@ function DashboardPage({
       )}
 
       <>
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40 sm:p-6">
+          <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="text-lg font-semibold text-slate-950">Acompanhamento rápido</p>
@@ -451,13 +462,13 @@ function DashboardPage({
                   key={metric.label}
                   type="button"
                   onClick={() => onFilterInventory(metric.filter)}
-                  className={`group flex min-h-24 items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm ${COLOR_TRANSITION_CLASS} hover:border-primary hover:bg-[var(--color-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+                  className={`group flex min-h-24 items-center justify-between gap-4 rounded-md border border-slate-200 bg-white p-4 text-left shadow-sm ${COLOR_TRANSITION_CLASS} hover:border-primary hover:bg-[var(--color-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
                 >
                   <span>
                     <span className="block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{metric.label}</span>
                     <span className="mt-2 block text-2xl font-semibold tracking-tight text-slate-950">{formatQuantity(metric.value)}</span>
                   </span>
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${metric.tone}`}>
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${metric.tone}`}>
                     <Icon name={metric.icon} className="h-5 w-5" />
                   </span>
                 </button>
@@ -465,7 +476,7 @@ function DashboardPage({
             </div>
           </section>
 
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40 sm:p-6">
+          <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-lg font-semibold text-slate-950">Movimentações recentes</p>
@@ -476,7 +487,7 @@ function DashboardPage({
             <div className="mt-5 divide-y divide-slate-100">
               {recentMovements.map(({ item, entry }) => (
                 <button key={entry.id} type="button" onClick={() => user.role === 'adm' && item.status === 'pending' ? onEditItem(item) : onOpenHistory(item)} className={`flex w-full flex-wrap items-center gap-3 py-3 text-left first:pt-0 last:pb-0 ${COLOR_TRANSITION_CLASS} hover:bg-slate-50`}>
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-hover)] text-xs font-bold text-primary">{getTypeIcon(item.type)}</span>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--color-hover)] text-xs font-bold text-primary">{getTypeIcon(item.type)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-slate-800">{item.description}</span>
                     <span className="mt-1 block truncate text-xs text-slate-500">{entry.summary}</span>
@@ -493,13 +504,13 @@ function DashboardPage({
       </>
 
       {user.role === 'adm' && (
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40 sm:p-6">
+        <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
                 <p className="text-lg font-semibold text-slate-950">Itens pendentes de aprovação</p>
                 <p className="mt-1 text-sm text-slate-500">Selecione um item para editar seu cadastro e status administrativo.</p>
               </div>
-              <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700">{formatQuantity(pendingItems.length)} pendente(s)</span>
+              <span className="rounded-md bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700">{formatQuantity(pendingItems.length)} pendente(s)</span>
             </div>
             <div className="divide-y divide-slate-100">
               {pendingItems.map((item) => (
@@ -510,7 +521,7 @@ function DashboardPage({
                   aria-label={`Editar item pendente: ${item.description}, ${item.nrPatrimonio}`}
                   className={`flex w-full flex-wrap items-center gap-3 py-3 text-left ${COLOR_TRANSITION_CLASS} hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary`}
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-xs font-bold text-amber-700">{getTypeIcon(item.type)}</span>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-50 text-xs font-bold text-amber-700">{getTypeIcon(item.type)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-slate-800">{item.description}</span>
                     <span className="mt-1 block text-xs text-slate-500">{item.nrPatrimonio} · {getTypeLabel(item.type)} · {item.cidade}</span>
@@ -521,7 +532,7 @@ function DashboardPage({
               ))}
               {pendingItems.length === 0 && (
                 <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Icon name="check" className="h-4 w-4" /></span>
+                  <span className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-50 text-emerald-600"><Icon name="check" className="h-4 w-4" /></span>
                   Nenhum item pendente de aprovação.
                 </div>
               )}
@@ -543,14 +554,14 @@ function InventorySummaryCard({ summary }: { summary: InventorySummary }) {
   const statesWithItems = (Object.entries(summary.stateCounts) as [ItemState, number][]).filter(([, count]) => count > 0);
 
   return (
-    <article className="rounded-2xl border border-primary bg-gradient-to-br from-white to-[var(--color-hover)] p-5 shadow-sm shadow-[var(--color-shadow)]">
+    <article className="rounded-md border border-primary bg-gradient-to-br from-white to-[var(--color-hover)] p-5 shadow-sm shadow-[var(--color-shadow)]">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Tipo patrimonial</p>
           <h3 className="mt-2 text-lg font-semibold leading-6 text-slate-950">{summary.description}</h3>
           <p className="mt-1 text-xs font-medium text-slate-500">{getTypeLabel(summary.type)}</p>
         </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-hover)] text-xs font-bold text-primary">{getTypeIcon(summary.type)}</div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--color-hover)] text-xs font-bold text-primary">{getTypeIcon(summary.type)}</div>
       </div>
 
       <div className="mt-5 flex items-baseline gap-2 border-t border-primary pt-4">
@@ -560,7 +571,7 @@ function InventorySummaryCard({ summary }: { summary: InventorySummary }) {
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {statesWithItems.map(([state, count]) => (
-          <div key={state} className="rounded-xl bg-white/80 px-3 py-2.5 ring-1 ring-inset ring-slate-100">
+          <div key={state} className="rounded-md bg-white/80 px-3 py-2.5 ring-1 ring-inset ring-slate-100">
             <p className="text-lg font-semibold text-slate-950">{formatQuantity(count)}</p>
             <p className="mt-0.5 text-[11px] font-medium leading-4 text-slate-500">{stateLabels[state]}</p>
           </div>
@@ -570,9 +581,29 @@ function InventorySummaryCard({ summary }: { summary: InventorySummary }) {
   );
 }
 
+const inventoryDetailColumns: DynamicDataTableColumn<InventoryItem, InventoryColumnKey>[] = [
+  {
+    key: 'nrPatrimonio',
+    label: 'Número de patrimônio',
+    locked: true,
+    sortValue: (item) => item.nrPatrimonio,
+    renderCell: (item) => <span className="inline-flex rounded-md bg-[var(--color-hover)] px-3 py-2 font-mono text-base font-bold text-primary">{item.nrPatrimonio}</span>,
+  },
+  { key: 'item', label: 'Descrição do cadastro', sortValue: (item) => item.description, renderCell: (item) => <span className="text-sm text-slate-600">{item.description}</span> },
+  { key: 'uuid', label: 'UUID', sortValue: (item) => item.uuid, renderCell: (item) => <span className="block max-w-[220px] truncate font-mono text-[11px] text-slate-500">{item.uuid}</span> },
+  { key: 'type', label: 'Tipo', sortValue: (item) => getTypeLabel(item.type), renderCell: (item) => <span className="text-sm text-slate-600">{getTypeLabel(item.type)}</span> },
+  { key: 'cidade', label: 'Cidade/unidade', sortValue: (item) => item.cidade, renderCell: (item) => <span className="text-sm text-slate-600">{item.cidade || '—'}</span> },
+  { key: 'state', label: 'Condição', sortValue: (item) => stateLabels[item.state], renderCell: (item) => <StateBadge state={item.state} /> },
+  { key: 'operationalStatus', label: 'Status operacional', sortValue: (item) => operationalStatusLabels[item.operationalStatus], renderCell: (item) => <OperationalStatusBadge status={item.operationalStatus} /> },
+  { key: 'valor', label: 'Valor estimado', numeric: true, sortValue: (item) => item.valor, renderCell: (item) => <span className="text-sm text-slate-700">{formatCurrency(item.valor)}</span> },
+  { key: 'status', label: 'Status administrativo', sortValue: (item) => statusLabels[item.status], renderCell: (item) => <StatusBadge status={item.status} /> },
+  { key: 'lastTimeTouched', label: 'Última movimentação', sortValue: (item) => Date.parse(item.lastTimeTouched), renderCell: (item) => <span className="whitespace-nowrap text-xs text-slate-500">{formatDateTime(item.lastTimeTouched)}</span> },
+];
+
 function InventoryPage({
   user,
   items,
+  selectedUnit,
   initialFilter,
   onOpenHistory,
   onEdit,
@@ -585,6 +616,7 @@ function InventoryPage({
 }: {
   user: AppUser;
   items: InventoryItem[];
+  selectedUnit: City | null;
   initialFilter: InventoryFilters | null;
   onOpenHistory: (item: InventoryItem) => void;
   onEdit: (item: InventoryItem) => void;
@@ -603,7 +635,6 @@ function InventoryPage({
   const [operationalStatusFilters, setOperationalStatusFilters] = useState<OperationalStatus[]>(() => initialFilter?.operationalStatuses ?? []);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
-  const [columnsOpen, setColumnsOpen] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<InventoryColumnKey[]>(defaultInventoryColumns);
   const [autoApplyDefaultOnEntry] = useState(() => initialFilter === null);
 
@@ -614,6 +645,10 @@ function InventoryPage({
     setStateFilters(initialFilter?.states ?? []);
     setOperationalStatusFilters(initialFilter?.operationalStatuses ?? []);
   }, [initialFilter?.query, initialFilter?.types, initialFilter?.statuses, initialFilter?.states, initialFilter?.operationalStatuses]);
+
+  useEffect(() => {
+    setSelectedDescription(null);
+  }, [selectedUnit]);
 
   const visibleItems = useMemo(() => visibleItemsForRole(items, user.role), [items, user.role]);
   const availableTypes = useMemo(() => Array.from(new Set(visibleItems.map((item) => item.type))).sort(), [visibleItems]);
@@ -761,13 +796,6 @@ function InventoryPage({
     onFilterChange(roleSafeFilters);
   };
 
-  const toggleColumn = (columnKey: InventoryColumnKey) => {
-    if (columnKey === 'nrPatrimonio') return;
-    setVisibleColumns((current) => current.includes(columnKey)
-      ? current.filter((key) => key !== columnKey)
-      : [...current, columnKey]);
-  };
-
   return (
     <>
       <section className="mb-7 flex flex-col justify-between gap-5 md:flex-row md:items-end">
@@ -777,15 +805,18 @@ function InventoryPage({
           {selectedDescription !== null && <Button variant="ghost" onClick={() => setSelectedDescription(null)} className="mt-3">Voltar ao estoque patrimonial</Button>}
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">{selectedDescription === null ? 'Consulte os totais por descrição e abra um item para ver seus patrimônios.' : `${detailItems.length} patrimônio(s) visível(is) neste cadastro. Cada número de patrimônio corresponde a uma unidade.`}</p>
         </div>
-        {canCreateItems(user.role) && (
-          <Button onClick={onCreate}>
-            <Icon name="plus" className="h-4 w-4" />
-            Novo item
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <InventoryViewTemplates userId={user.id} autoApplyDefaultOnEntry={autoApplyDefaultOnEntry} filters={currentFilters} columns={visibleColumns} onApply={applySavedView} onToast={onToast} />
+          {canCreateItems(user.role) && (
+            <Button onClick={onCreate}>
+              <Icon name="plus" className="h-4 w-4" />
+              Novo item
+            </Button>
+          )}
+        </div>
       </section>
 
-      <section hidden={selectedDescription !== null} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/40 sm:p-5">
+      <section hidden={selectedDescription !== null} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/40 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
             <label htmlFor="inventory-search" className="sr-only">Descrição ou patrimônio</label>
@@ -793,14 +824,14 @@ function InventoryPage({
               <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <TextInput id="inventory-search" value={query} onChange={(event) => handleQueryChange(event.target.value)} onFocus={() => setSuggestionsOpen(query.trim().length >= 3)} placeholder="Ex.: mangueira, CBM-VTR-0001..." className="!h-10 pl-10" />
               {suggestionsOpen && suggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
+                <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-md border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
                   <p className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Sugestões de descrição</p>
                   <ul className="max-h-64 overflow-y-auto">
                     {suggestions.map((suggestion) => (
                       <li key={suggestion.description}>
-                        <button type="button" onClick={() => selectSuggestion(suggestion.description)} className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left ${COLOR_TRANSITION_CLASS} hover:bg-[var(--color-hover)]`}>
+                        <button type="button" onClick={() => selectSuggestion(suggestion.description)} className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left ${COLOR_TRANSITION_CLASS} hover:bg-[var(--color-hover)]`}>
                           <span className="min-w-0 truncate text-sm font-medium text-slate-700">{suggestion.description}</span>
-                          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">{suggestion.count} item(ns)</span>
+                          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">{suggestion.count} item(ns)</span>
                         </button>
                       </li>
                     ))}
@@ -848,23 +879,6 @@ function InventoryPage({
                 syncFiltersToUrl({ operationalStatuses: nextOperationalStatuses });
               }}
             />
-            <div className="relative shrink-0">
-              <button type="button" aria-expanded={columnsOpen} onClick={() => setColumnsOpen((current) => !current)} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-medium ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${columnsOpen ? 'border-primary bg-[var(--color-hover)] text-primary' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-                Colunas <Icon name="chevron-down" className="h-3.5 w-3.5 text-slate-400" />
-              </button>
-              {columnsOpen && (
-                <div role="group" aria-label="Colunas dos detalhes patrimoniais" className="absolute right-0 top-[calc(100%+0.5rem)] z-40 max-h-80 w-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/10">
-                  <p className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Colunas dos exemplares</p>
-                  {inventoryColumnOptions.map((column) => (
-                    <label key={column.key} className={`flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2 text-xs ${COLOR_TRANSITION_CLASS} hover:bg-slate-50`}>
-                      <input type="checkbox" checked={visibleColumns.includes(column.key)} disabled={column.key === 'nrPatrimonio'} onChange={() => toggleColumn(column.key)} className="h-4 w-4 rounded accent-primary" />
-                      {column.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-            <InventoryViewTemplates userId={user.id} autoApplyDefaultOnEntry={autoApplyDefaultOnEntry} filters={currentFilters} columns={visibleColumns} onApply={applySavedView} onToast={onToast} />
             {hasFilters && <Button type="button" variant="ghost" onClick={clearFilters} className="min-h-10 px-3">Limpar</Button>}
           </div>
         </div>
@@ -908,7 +922,7 @@ function InventoryPage({
         </section>
       )}
 
-      <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/40">
+      <section className="mt-5 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm shadow-slate-200/40">
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
           <div>
             <p className="text-sm font-semibold text-slate-950">Bens cadastrados</p>
@@ -947,54 +961,30 @@ function InventoryPage({
           <>
             <div className="flex flex-wrap gap-3 px-5 py-3">
               <Button variant="secondary" onClick={() => onExportCurrent(detailItems, visibleColumns)}>Exportar PDF</Button>
-              <Button variant="ghost" onClick={() => setColumnsOpen((current) => !current)} aria-expanded={columnsOpen}>Colunas</Button>
-              {columnsOpen && inventoryColumnOptions.map((column) => <label key={column.key} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={visibleColumns.includes(column.key)} disabled={column.key === 'nrPatrimonio'} onChange={() => toggleColumn(column.key)} />{column.label}</label>)}
             </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-[1050px] w-full text-left">
-            <thead className="bg-slate-50/80 text-[10px] uppercase tracking-[0.13em] text-slate-400">
-              <tr>
-                {visibleColumns.map((columnKey) => (
-                  <th key={columnKey} className="px-4 py-3 font-bold first:pl-5 sm:first:pl-6">{inventoryColumnOptions.find((column) => column.key === columnKey)?.label}</th>
-                ))}
-                <th className="px-4 py-3 text-right font-bold sm:px-6">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {detailItems.map((item) => (
-                <tr key={item.uuid} className={`group ${COLOR_TRANSITION_CLASS} hover:bg-slate-50/70`}>
-                  {visibleColumns.map((columnKey) => (
-                    <td key={columnKey} className="px-4 py-4 first:pl-5 sm:first:pl-6">
-                      {columnKey === 'nrPatrimonio' && <span className="inline-flex rounded-lg bg-[var(--color-hover)] px-3 py-2 font-mono text-base font-bold text-primary">{item.nrPatrimonio}</span>}
-                      {columnKey === 'item' && <span className="text-sm text-slate-600">{item.description}</span>}
-                      {columnKey === 'uuid' && <span className="block max-w-[220px] truncate font-mono text-[11px] text-slate-500">{item.uuid}</span>}
-                      {columnKey === 'type' && <span className="text-sm text-slate-600">{getTypeLabel(item.type)}</span>}
-                      {columnKey === 'cidade' && <span className="text-sm text-slate-600">{item.cidade || '—'}</span>}
-                      {columnKey === 'state' && <StateBadge state={item.state} />}
-                      {columnKey === 'operationalStatus' && <OperationalStatusBadge status={item.operationalStatus} />}
-                      {columnKey === 'valor' && <span className="text-sm text-slate-700">{formatCurrency(item.valor)}</span>}
-                      {columnKey === 'status' && <StatusBadge status={item.status} />}
-                      {columnKey === 'lastTimeTouched' && <span className="whitespace-nowrap text-xs text-slate-500">{formatDateTime(item.lastTimeTouched)}</span>}
-                    </td>
-                  ))}
-                  <td className="px-4 py-4 sm:px-6">
-                    <div className="flex justify-end gap-1">
-                      <IconButton label="Ver histórico" onClick={() => onOpenHistory(item)}><Icon name="history" className="h-4 w-4" /></IconButton>
-                      {canEditItem(user.role) && <IconButton label="Editar item" onClick={() => onEdit(item)}><Icon name="edit" className="h-4 w-4" /></IconButton>}
-                      {user.role === 'adm' && item.status === 'pending' && <IconButton label="Aprovar item" onClick={() => onApproveItem(item)} className="text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"><Icon name="check" className="h-4 w-4" /></IconButton>}
-                      {user.role === 'adm' && item.status === 'pending' && <IconButton label="Rejeitar item" onClick={() => onRejectItem(item)} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"><Icon name="close" className="h-4 w-4" /></IconButton>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            <DynamicDataTable
+              ariaLabel="Detalhes individuais dos patrimônios"
+              rows={detailItems}
+              columns={inventoryDetailColumns}
+              visibleColumnKeys={visibleColumns}
+              defaultColumnKeys={defaultInventoryColumns}
+              onVisibleColumnKeysChange={setVisibleColumns}
+              getRowKey={(item) => item.uuid}
+              getActionMenuLabel={(item) => `Ações para ${item.description}, ${item.nrPatrimonio}`}
+              getActions={(item): TableAction[] => [
+                { key: 'history', label: 'Ver histórico', icon: 'history', onSelect: () => onOpenHistory(item) },
+                ...(canEditItem(user.role) ? [{ key: 'edit', label: 'Editar item', icon: 'edit' as const, onSelect: () => onEdit(item) }] : []),
+                ...(user.role === 'adm' && item.status === 'pending' ? [
+                  { key: 'approve', label: 'Aprovar item', icon: 'check' as const, tone: 'success' as const, onSelect: () => onApproveItem(item) },
+                  { key: 'reject', label: 'Rejeitar item', icon: 'close' as const, tone: 'danger' as const, onSelect: () => onRejectItem(item) },
+                ] : []),
+              ]}
+            />
           </>
         )}
         {displayedItems.length === 0 && (
           <div className="border-t border-slate-100 px-6 py-14 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><Icon name="search" className="h-5 w-5" /></div>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-slate-100 text-slate-400"><Icon name="search" className="h-5 w-5" /></div>
             <p className="mt-4 text-sm font-semibold text-slate-800">Nenhum bem encontrado</p>
             <p className="mt-1 text-sm text-slate-500">Tente ajustar a busca ou limpar os filtros.</p>
             {hasFilters && <Button variant="ghost" onClick={clearFilters} className="mt-3">Limpar filtros</Button>}
@@ -1036,10 +1026,10 @@ function HistoryDrawer({
             <StatusBadge status={item.status} />
             <StateBadge state={item.state} />
             <OperationalStatusBadge status={item.operationalStatus} />
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{getTypeLabel(item.type)}</span>
+            <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{getTypeLabel(item.type)}</span>
           </div>
 
-          <div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="mt-7 rounded-md border border-slate-200 bg-slate-50 p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Última movimentação</p>
             <p className="mt-2 text-sm font-semibold text-slate-800">{formatDateTime(item.lastTimeTouched)}</p>
             <p className="mt-1 text-xs text-slate-500">O histórico é mantido localmente nesta demonstração.</p>
@@ -1047,9 +1037,9 @@ function HistoryDrawer({
 
           <div className="mt-6 space-y-3">
             {history.map((entry) => (
-              <article key={entry.id} className="relative rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <article key={entry.id} className="relative rounded-md border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-hover)] text-primary"><Icon name="history" className="h-4 w-4" /></div>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--color-hover)] text-primary"><Icon name="history" className="h-4 w-4" /></div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-900">{historyActionLabels[entry.action]}</p>
@@ -1075,12 +1065,14 @@ function ItemFormModal({
   items,
   item,
   role,
+  defaultCity,
   onClose,
   onSubmit,
 }: {
   items: InventoryItem[];
   item: InventoryItem | null;
   role: UserRole;
+  defaultCity: City | null;
   onClose: () => void;
   onSubmit: (values: InventoryFormValues) => void;
 }) {
@@ -1097,13 +1089,13 @@ function ItemFormModal({
           valor: 0,
           quantidade: 1,
           nrPatrimonio: createPatrimonyNumber(),
-          cidade: City.EB_PAULINIA,
+          cidade: defaultCity ?? City.EB_PAULINIA,
           status: role === 'adm' ? 'active' : 'pending',
         },
   );
   const effectiveStatus = !isEditing && (role === 'adm' || hasApprovedRegistration(items, form.description)) ? 'active' : form.status;
   const [error, setError] = useState('');
-  const [cityQuery, setCityQuery] = useState<string>(item?.cidade ?? City.EB_PAULINIA);
+  const [cityQuery, setCityQuery] = useState<string>(item?.cidade ?? defaultCity ?? City.EB_PAULINIA);
   const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
 
   const citySuggestions = useMemo(() => {
@@ -1195,7 +1187,7 @@ function ItemFormModal({
                 placeholder="Digite para buscar uma unidade"
               />
               {citySuggestionsOpen && citySuggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
+                <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-md border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
                   <ul id="item-city-options" role="listbox" className="grid gap-1">
                     {citySuggestions.map((city) => (
                       <li key={city}>
@@ -1205,7 +1197,7 @@ function ItemFormModal({
                           aria-selected={form.cidade === city}
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => selectCity(city)}
-                          className={`flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-700 ${COLOR_TRANSITION_CLASS} hover:bg-[var(--color-hover)] hover:text-primary`}
+                          className={`flex w-full items-center rounded-md px-3 py-2.5 text-left text-sm font-medium text-slate-700 ${COLOR_TRANSITION_CLASS} hover:bg-[var(--color-hover)] hover:text-primary`}
                         >
                           {city}
                         </button>
@@ -1238,7 +1230,7 @@ function ItemFormModal({
                   {itemStatuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
                 </SelectInput>
               ) : (
-                <div className={`flex h-11 items-center rounded-xl border border-dashed px-3.5 text-sm font-semibold ${effectiveStatus === 'active' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-700'}`}>
+                <div className={`flex h-11 items-center rounded-md border border-dashed px-3.5 text-sm font-semibold ${effectiveStatus === 'active' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-700'}`}>
                   <span className={`mr-2 h-2 w-2 rounded-full ${effectiveStatus === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                   {statusLabels[effectiveStatus]}
                 </div>
@@ -1246,9 +1238,9 @@ function ItemFormModal({
             </div>
           </div>
 
-          {error && <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">{error}</div>}
+          {error && <div role="alert" className="mt-5 rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">{error}</div>}
 
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">
+          <div className="mt-6 rounded-md bg-slate-50 p-4 text-xs leading-5 text-slate-500">
             <div className="flex gap-2"><Icon name="info" className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" /><span>{isEditing && !isAdmin ? 'O almoxarife pode atualizar condição operacional e cidade/unidade.' : role === 'almoxarife' ? 'Exemplares de cadastros já aprovados entram como ativos. Cadastros novos aguardam aprovação do gestor.' : 'Itens criados pelo gestor entram automaticamente como ativos.'}</span></div>
           </div>
         </form>
@@ -1267,8 +1259,8 @@ function ToastBanner({ toast, onClose }: { toast: Toast; onClose: () => void }) 
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-[60] flex max-w-sm items-start gap-3 rounded-2xl border border-emerald-200 bg-white px-4 py-3 shadow-xl shadow-slate-900/10">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Icon name={toast.tone === 'success' ? 'check' : 'info'} className="h-4 w-4" /></div>
+    <div className="fixed bottom-5 right-5 z-[60] flex max-w-sm items-start gap-3 rounded-md border border-emerald-200 bg-white px-4 py-3 shadow-xl shadow-slate-900/10">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600"><Icon name={toast.tone === 'success' ? 'check' : 'info'} className="h-4 w-4" /></div>
       <div className="flex-1 pt-0.5"><p className="text-sm font-semibold text-slate-800">{toast.message}</p><p className="mt-0.5 text-xs text-slate-500">{toast.detail ?? 'Alteração aplicada apenas nesta sessão.'}</p></div>
       <IconButton label="Fechar mensagem" onClick={onClose} className="-mr-2 -mt-2"><Icon name="close" className="h-4 w-4" /></IconButton>
     </div>
@@ -1316,12 +1308,14 @@ function App() {
   const [initialRoute] = useState<AppRoute>(() => parseAppRoute(window.location.hash));
   const [page, setPage] = useState<AppPage>(() => initialRoute.page);
   const [inventoryFilter, setInventoryFilter] = useState<InventoryFilters | null>(() => initialRoute.filter);
+  const [selectedUnit, setSelectedUnit] = useState<City | null>(() => initialRoute.unit);
   const [items, setItems] = useState<InventoryItem[]>(inventorySeed);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<InventoryItem | null>(null);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
   const [exportScope, setExportScope] = useState<'all' | null>(null);
   const [toast, setToast] = useState<Toast>(null);
+  const unitScopedItems = useMemo(() => itemsForUnit(items, selectedUnit), [items, selectedUnit]);
 
   useEffect(() => {
     applyTheme(theme);
@@ -1330,23 +1324,28 @@ function App() {
   useEffect(() => {
     const syncRouteFromLocation = () => {
       let nextRoute = parseAppRoute(window.location.hash);
+      const nextUnit = nextRoute.hasUnit ? nextRoute.unit : session?.unidade || null;
       if (session && session.role !== 'adm' && nextRoute.page === 'users') {
         const fallbackPage: AppPage = session.role === 'reader' ? 'inventory' : 'dashboard';
-        updateAppRouteUrl(fallbackPage, null, true);
-        nextRoute = { page: fallbackPage, filter: null };
+        updateAppRouteUrl(fallbackPage, null, true, nextUnit);
+        nextRoute = { ...nextRoute, page: fallbackPage, filter: null };
       }
       if (session?.role === 'reader' && nextRoute.page !== 'profile') {
         const readerFilter = normalizeInventoryFilters({
           ...(nextRoute.filter ?? {}),
           statuses: nextRoute.filter?.statuses?.filter((status) => status === 'active'),
         });
-        if (nextRoute.page !== 'inventory' || getAppRouteHash('inventory', readerFilter) !== window.location.hash) {
-          updateAppRouteUrl('inventory', readerFilter, true);
+        if (nextRoute.page !== 'inventory' || getAppRouteHash('inventory', readerFilter, nextUnit) !== window.location.hash) {
+          updateAppRouteUrl('inventory', readerFilter, true, nextUnit);
         }
-        nextRoute = { page: 'inventory', filter: readerFilter };
+        nextRoute = { ...nextRoute, page: 'inventory', filter: readerFilter };
+      }
+      if (session?.unidade && !nextRoute.hasUnit) {
+        updateAppRouteUrl(nextRoute.page, nextRoute.filter, true, session.unidade);
       }
       setPage(nextRoute.page);
       setInventoryFilter(nextRoute.filter);
+      setSelectedUnit(nextUnit);
       setSelectedHistoryItem(null);
       setSelectedUser(null);
       setModal(null);
@@ -1367,6 +1366,7 @@ function App() {
 
   const handleLogin = (user: AppUser) => {
     const requestedRoute = parseAppRoute(window.location.hash);
+    const nextUnit = requestedRoute.hasUnit ? requestedRoute.unit : user.unidade || null;
     const canOpenRequestedPage = requestedRoute.page !== 'users' || user.role === 'adm';
     const landingPage: AppPage = requestedRoute.page === 'profile'
       ? 'profile'
@@ -1378,9 +1378,10 @@ function App() {
       : requestedRoute.filter;
     const landingFilter = landingPage === 'inventory' ? requestedFilter : null;
     setSession(user);
+    setSelectedUnit(nextUnit);
     setPage(landingPage);
     setInventoryFilter(landingFilter);
-    updateAppRouteUrl(landingPage, landingFilter, true);
+    updateAppRouteUrl(landingPage, landingFilter, true, nextUnit);
     setSelectedHistoryItem(null);
     setSelectedUser(null);
     setModal(null);
@@ -1389,6 +1390,7 @@ function App() {
 
   const handleLogout = () => {
     setSession(null);
+    setSelectedUnit(null);
     setInventoryFilter(null);
     window.history.replaceState(window.history.state, '', '#/login');
     setSelectedHistoryItem(null);
@@ -1406,14 +1408,23 @@ function App() {
     if (session?.role === 'reader' && nextPage !== 'profile') {
       setPage('inventory');
       setInventoryFilter(null);
-      updateAppRouteUrl('inventory', null, true);
+      updateAppRouteUrl('inventory', null, true, selectedUnit);
       return;
     }
 
     setInventoryFilter(null);
     setPage(nextPage);
     setSelectedUser(null);
-    updateAppRouteUrl(nextPage);
+    updateAppRouteUrl(nextPage, null, false, selectedUnit);
+  };
+
+  const handleSelectUnit = (unit: City | null) => {
+    const nextPage: AppPage = session?.role === 'reader' && page !== 'profile' ? 'inventory' : page;
+    setSelectedUnit(unit);
+    setSelectedHistoryItem(null);
+    setModal(null);
+    setExportScope(null);
+    updateAppRouteUrl(nextPage, nextPage === 'inventory' ? inventoryFilter : null, false, unit);
   };
 
   const handleUpdateUserRole = (userId: string, role: UserRole) => {
@@ -1436,7 +1447,7 @@ function App() {
       setSession(updatedUser);
       setPage(landingPage);
       setInventoryFilter(null);
-      updateAppRouteUrl(landingPage, null, true);
+      updateAppRouteUrl(landingPage, null, true, selectedUnit);
     }
   };
 
@@ -1452,6 +1463,9 @@ function App() {
     };
     setUsers((currentUsers) => currentUsers.map((user) => user.id === session.id ? updatedUser : user));
     setSession(updatedUser);
+    const nextUnit = profile.unidade !== session.unidade ? updatedUser.unidade || null : selectedUnit;
+    setSelectedUnit(nextUnit);
+    updateAppRouteUrl(page, page === 'inventory' ? inventoryFilter : null, true, nextUnit);
     setToast({ message: 'Perfil atualizado.', tone: 'success', detail: 'Seus dados foram atualizados nesta sessão do protótipo.' });
   };
 
@@ -1461,13 +1475,13 @@ function App() {
       : { operationalStatuses: [filter.value] };
     setInventoryFilter(nextFilter);
     setPage('inventory');
-    updateAppRouteUrl('inventory', nextFilter);
+    updateAppRouteUrl('inventory', nextFilter, false, selectedUnit);
   };
 
   const handleInventoryFilterChange = (filter: InventoryFilters | null) => {
     const nextFilter = normalizeInventoryFilters(filter);
     setInventoryFilter(nextFilter);
-    updateAppRouteUrl('inventory', nextFilter, true);
+    updateAppRouteUrl('inventory', nextFilter, true, selectedUnit);
   };
 
   const handleSaveItem = (values: InventoryFormValues) => {
@@ -1523,12 +1537,12 @@ function App() {
         }));
       setToast({ message: 'Registro atualizado com sucesso.', tone: 'success' });
     } else {
-      const status: ItemStatus = session.role === 'adm' || hasApprovedRegistration(items, values.description) ? 'active' : 'pending';
+      const status: ItemStatus = session.role === 'adm' || hasApprovedRegistration(unitScopedItems, values.description) ? 'active' : 'pending';
       const historyEntry = createHistoryEntry(session, 'created', status === 'active' ? 'Exemplar ativado em cadastro aprovado.' : 'Patrimônio criado e enviado para aprovação do gestor.', {
         nextStatus: status,
         nextCity: values.cidade,
       });
-      const existingRegistration = items.find((item) => descriptionKey(item.description) === descriptionKey(values.description));
+      const existingRegistration = unitScopedItems.find((item) => descriptionKey(item.description) === descriptionKey(values.description));
       const newItem: InventoryItem = {
         ...values,
         description: existingRegistration?.description ?? values.description,
@@ -1551,7 +1565,7 @@ function App() {
     }
 
     setItems((currentItems) => currentItems.map((currentItem) => {
-      if (currentItem.status !== 'pending' || (nextStatus === 'active' ? descriptionKey(currentItem.description) !== descriptionKey(item.description) : currentItem.uuid !== item.uuid)) {
+      if (currentItem.status !== 'pending' || (selectedUnit !== null && currentItem.cidade !== selectedUnit) || (nextStatus === 'active' ? descriptionKey(currentItem.description) !== descriptionKey(item.description) : currentItem.uuid !== item.uuid)) {
         return currentItem;
       }
 
@@ -1597,7 +1611,7 @@ function App() {
       return;
     }
 
-    handleExport(visibleItemsForRole(items, session.role), defaultInventoryColumns, format, 'almoxarifado-cbm-sp', session);
+    handleExport(visibleItemsForRole(unitScopedItems, session.role), defaultInventoryColumns, format, 'almoxarifado-cbm-sp', session);
     setExportScope(null);
   };
 
@@ -1611,22 +1625,22 @@ function App() {
 
   return (
     <>
-      <InventoryShell user={session} page={currentPage} onNavigate={handleNavigate} onLogout={handleLogout} onExportAll={() => setExportScope('all')} theme={theme} onToggleTheme={toggleTheme}>
+      <InventoryShell user={session} page={currentPage} selectedUnit={selectedUnit} onSelectUnit={handleSelectUnit} onNavigate={handleNavigate} onLogout={handleLogout} onExportAll={() => setExportScope('all')} theme={theme} onToggleTheme={toggleTheme}>
         {currentPage === 'dashboard' ? (
-          <DashboardPage user={session} items={items} onNavigate={handleNavigate} onFilterInventory={handleFilterInventory} onOpenHistory={setSelectedHistoryItem} onEditItem={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} />
+          <DashboardPage user={session} items={unitScopedItems} onNavigate={handleNavigate} onFilterInventory={handleFilterInventory} onOpenHistory={setSelectedHistoryItem} onEditItem={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} />
         ) : currentPage === 'inventory' ? (
-          <InventoryPage user={session} items={items} initialFilter={inventoryFilter} onOpenHistory={setSelectedHistoryItem} onApproveItem={(item) => handleReviewStatus(item, 'active')} onRejectItem={(item) => handleReviewStatus(item, 'rejected')} onEdit={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} onExportCurrent={handleExportCurrent} onFilterChange={handleInventoryFilterChange} onToast={(nextToast) => setToast(nextToast)} />
+          <InventoryPage user={session} items={unitScopedItems} selectedUnit={selectedUnit} initialFilter={inventoryFilter} onOpenHistory={setSelectedHistoryItem} onApproveItem={(item) => handleReviewStatus(item, 'active')} onRejectItem={(item) => handleReviewStatus(item, 'rejected')} onEdit={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} onExportCurrent={handleExportCurrent} onFilterChange={handleInventoryFilterChange} onToast={(nextToast) => setToast(nextToast)} />
         ) : currentPage === 'users' ? (
-          <UserManagementPage users={users} onSelectUser={setSelectedUser} />
+          <UserManagementPage users={selectedUnit ? users.filter((user) => user.unidade === selectedUnit) : users} onSelectUser={setSelectedUser} />
         ) : (
           <ProfilePage user={session} onSave={handleSaveUserProfile} />
         )}
       </InventoryShell>
 
       <HistoryDrawer item={selectedHistoryItem} onClose={() => setSelectedHistoryItem(null)} />
-      {modal && <ItemFormModal items={items} item={modal.mode === 'edit' ? modal.item : null} role={session.role} onClose={() => setModal(null)} onSubmit={handleSaveItem} />}
+      {modal && <ItemFormModal items={unitScopedItems} item={modal.mode === 'edit' ? modal.item : null} role={session.role} defaultCity={selectedUnit} onClose={() => setModal(null)} onSubmit={handleSaveItem} />}
       {selectedUser && session.role === 'adm' && <EditUserRoleModal user={selectedUser} onClose={() => setSelectedUser(null)} onSave={handleUpdateUserRole} />}
-      {exportScope === 'all' && <ExportFormatModal itemCount={visibleItemsForRole(items, session.role).length} onClose={() => setExportScope(null)} onExport={handleExportAll} />}
+      {exportScope === 'all' && <ExportFormatModal itemCount={visibleItemsForRole(unitScopedItems, session.role).length} onClose={() => setExportScope(null)} onExport={handleExportAll} />}
       <ToastBanner toast={toast} onClose={() => setToast(null)} />
     </>
   );

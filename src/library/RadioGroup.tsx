@@ -51,7 +51,7 @@ export function RadioGroup({
         {options.map((option) => {
           const optionId = `${groupId}-${option.value}`;
           return (
-            <label key={option.value} htmlFor={optionId} className={cn(`group flex items-start gap-3 rounded-xl border border-transparent p-3 ${COLOR_TRANSITION_CLASS}`, option.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-slate-200 hover:bg-slate-50')}>
+            <label key={option.value} htmlFor={optionId} className={cn(`group flex items-start gap-3 rounded-md border border-transparent p-3 ${COLOR_TRANSITION_CLASS}`, option.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-slate-200 hover:bg-slate-50')}>
               <input
                 id={optionId}
                 name={groupName}

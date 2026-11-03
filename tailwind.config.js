@@ -3,6 +3,11 @@ module.exports = {
   darkMode: 'class',
   content: ['./src/**/*.{js,jsx,ts,tsx}'],
   theme: {
+    borderRadius: {
+      sm: '0.125rem',
+      md: '0.25rem',
+      full: '9999px',
+    },
     extend: {
       colors: {
         background: 'var(--color-background)',

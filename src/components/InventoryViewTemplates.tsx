@@ -219,21 +219,21 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         onClick={() => setIsOpen((current) => !current)}
-        className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-medium ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isOpen ? 'border-primary bg-[var(--color-hover)] text-primary' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+        className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isOpen ? 'border-primary bg-[var(--color-hover)] text-primary' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
       >
         <Icon name="archive" className="h-4 w-4" />
         <span>Modelos</span>
-        {templates.length > 0 && <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{templates.length}</span>}
+        {templates.length > 0 && <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{templates.length}</span>}
       </button>
 
       {isOpen && (
-        <section role="dialog" aria-label="Templates de filtros e colunas" className="absolute right-0 top-[calc(100%+0.5rem)] z-50 flex max-h-[calc(100vh-8rem)] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
+        <section role="dialog" aria-label="Templates de filtros e colunas" className="absolute right-0 top-[calc(100%+0.5rem)] z-50 flex max-h-[calc(100vh-8rem)] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
           <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">Modelos salvos</h2>
               <p className="mt-0.5 text-xs text-slate-500">Filtros e colunas neste dispositivo</p>
             </div>
-            <button type="button" aria-label="Fechar modelos" onClick={() => setIsOpen(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+            <button type="button" aria-label="Fechar modelos" onClick={() => setIsOpen(false)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
               <Icon name="close" className="h-4 w-4" />
             </button>
           </header>
@@ -242,14 +242,14 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
             <button
               type="button"
               onClick={() => { setShowSaveForm((current) => !current); setFormError(''); setRenamingId(null); }}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 ${COLOR_TRANSITION_CLASS} hover:border-primary hover:bg-[var(--color-hover)] hover:text-primary`}
+              className={`flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 ${COLOR_TRANSITION_CLASS} hover:border-primary hover:bg-[var(--color-hover)] hover:text-primary`}
             >
               <Icon name="plus" className="h-4 w-4" />
               Salvar configuração atual
             </button>
 
             {showSaveForm && (
-              <form onSubmit={saveCurrentView} className="mt-3 rounded-xl bg-slate-50 p-3">
+              <form onSubmit={saveCurrentView} className="mt-3 rounded-md bg-slate-50 p-3">
                 <label htmlFor="new-inventory-view-name" className="mb-1.5 block text-xs font-semibold text-slate-700">Nome do template</label>
                 <input
                   id="new-inventory-view-name"
@@ -258,17 +258,17 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
                   value={newName}
                   onChange={(event) => { setNewName(event.target.value); setFormError(''); }}
                   placeholder="Ex.: Ferramentas em manutenção"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-[var(--color-focus)]"
+                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-[var(--color-focus)]"
                 />
                 {formError && <p role="alert" className="mt-2 text-xs text-rose-600">{formError}</p>}
                 <div className="mt-3 flex justify-end gap-2">
-                  <button type="button" onClick={() => { setShowSaveForm(false); setFormError(''); }} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-200">Cancelar</button>
-                  <button type="submit" disabled={isSaving} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{isSaving ? 'Salvando…' : 'Salvar'}</button>
+                  <button type="button" onClick={() => { setShowSaveForm(false); setFormError(''); }} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-200">Cancelar</button>
+                  <button type="submit" disabled={isSaving} className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{isSaving ? 'Salvando…' : 'Salvar'}</button>
                 </div>
               </form>
             )}
 
-            {loadError && <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Não foi possível acessar os templates locais neste navegador.</p>}
+            {loadError && <p role="alert" className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">Não foi possível acessar os templates locais neste navegador.</p>}
             {isLoading ? (
               <p className="px-2 py-5 text-center text-sm text-slate-500">Carregando templates…</p>
             ) : templates.length === 0 ? (
@@ -276,7 +276,7 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
             ) : (
               <ul className="mt-3 space-y-2">
                 {templates.map((template) => (
-                  <li key={template.id} className="rounded-xl border border-slate-200 p-3">
+                  <li key={template.id} className="rounded-md border border-slate-200 p-3">
                     {renamingId === template.id ? (
                       <form onSubmit={(event) => renameTemplate(event, template)}>
                         <label htmlFor={`rename-view-${template.id}`} className="mb-1.5 block text-xs font-semibold text-slate-700">Novo nome</label>
@@ -286,34 +286,34 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
                           maxLength={60}
                           value={renameValue}
                           onChange={(event) => { setRenameValue(event.target.value); setFormError(''); }}
-                          className="h-9 w-full rounded-lg border border-slate-200 px-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-[var(--color-focus)]"
+                          className="h-9 w-full rounded-md border border-slate-200 px-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-[var(--color-focus)]"
                         />
                         {formError && <p role="alert" className="mt-2 text-xs text-rose-600">{formError}</p>}
                         <div className="mt-2 flex justify-end gap-2">
-                          <button type="button" onClick={() => { setRenamingId(null); setFormError(''); }} className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100">Cancelar</button>
-                          <button type="submit" disabled={busyId === template.id} className="rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50">Salvar nome</button>
+                          <button type="button" onClick={() => { setRenamingId(null); setFormError(''); }} className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100">Cancelar</button>
+                          <button type="submit" disabled={busyId === template.id} className="rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50">Salvar nome</button>
                         </div>
                       </form>
                     ) : (
                       <>
-                        <button type="button" onClick={() => applyTemplate(template)} className="block w-full rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                        <button type="button" onClick={() => applyTemplate(template)} className="block w-full rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
                           <span className="block truncate text-sm font-semibold text-slate-800">{template.name}</span>
                           <span className="mt-1 block text-[11px] text-slate-400">Atualizado {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(template.updatedAt))} · {template.columns.length} coluna(s)</span>
-                          {defaultTemplateId === template.id && <span className="mt-1 inline-flex rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold text-primary">Abre automaticamente</span>}
+                          {defaultTemplateId === template.id && <span className="mt-1 inline-flex rounded-md bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold text-primary">Abre automaticamente</span>}
                         </button>
                         <div className="mt-2 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2">
-                          <button type="button" onClick={() => applyTemplate(template)} className="rounded-lg bg-[var(--color-hover)] px-2 py-1 text-xs font-semibold text-primary hover:opacity-80">Aplicar</button>
-                          {defaultTemplateId !== template.id && <button type="button" disabled={busyId === template.id} onClick={() => setAsDefault(template)} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">Definir padrão</button>}
-                          <button type="button" disabled={busyId === template.id} onClick={() => updateTemplate(template)} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">Atualizar</button>
-                          <button type="button" onClick={() => { setRenamingId(template.id); setRenameValue(template.name); setFormError(''); setShowSaveForm(false); }} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100">Renomear</button>
-                          <button type="button" onClick={() => setDeleteConfirmationId(template.id)} className="rounded-lg px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50">Excluir</button>
+                          <button type="button" onClick={() => applyTemplate(template)} className="rounded-md bg-[var(--color-hover)] px-2 py-1 text-xs font-semibold text-primary hover:opacity-80">Aplicar</button>
+                          {defaultTemplateId !== template.id && <button type="button" disabled={busyId === template.id} onClick={() => setAsDefault(template)} className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">Definir padrão</button>}
+                          <button type="button" disabled={busyId === template.id} onClick={() => updateTemplate(template)} className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">Atualizar</button>
+                          <button type="button" onClick={() => { setRenamingId(template.id); setRenameValue(template.name); setFormError(''); setShowSaveForm(false); }} className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100">Renomear</button>
+                          <button type="button" onClick={() => setDeleteConfirmationId(template.id)} className="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50">Excluir</button>
                         </div>
                         {deleteConfirmationId === template.id && (
-                          <div className="mt-2 rounded-lg bg-rose-50 p-2.5">
+                          <div className="mt-2 rounded-md bg-rose-50 p-2.5">
                             <p className="text-xs text-rose-800">Excluir “{template.name}”?</p>
                             <div className="mt-2 flex justify-end gap-2">
-                              <button type="button" onClick={() => setDeleteConfirmationId(null)} className="rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-white">Cancelar</button>
-                              <button type="button" disabled={busyId === template.id} onClick={() => removeTemplate(template)} className="rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50">Confirmar exclusão</button>
+                              <button type="button" onClick={() => setDeleteConfirmationId(null)} className="rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-white">Cancelar</button>
+                              <button type="button" disabled={busyId === template.id} onClick={() => removeTemplate(template)} className="rounded-md bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50">Confirmar exclusão</button>
                             </div>
                           </div>
                         )}
