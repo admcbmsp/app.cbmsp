@@ -2,7 +2,7 @@
 
 Atualizado em 01/11/2026.
 
-Este documento registra o que ainda precisa ser decidido, implementado ou validado após as novas orientações do cliente. O plano principal está em [PLANO_IMPLEMENTACAO_PROTOTIPO.md](<C:\Users\Admin\Desktop\Projects\OnGoing\app.cbmsp\PLANO_IMPLEMENTACAO_PROTOTIPO.md>).
+Este documento registra o que ainda precisa ser decidido, implementado ou validado após as novas orientações do cliente. O plano funcional está em [PLANO_IMPLEMENTACAO_PROTOTIPO.md](PLANO_IMPLEMENTACAO_PROTOTIPO.md) e o plano de organização do código em [PLANO_REFATORACAO_CODIGO.md](PLANO_REFATORACAO_CODIGO.md).
 
 ## Status da rodada de implementação
 

@@ -1,4 +1,5 @@
 import { City, InventoryHistoryEntry, InventoryItem, ItemState, ItemStatus, OperationalStatus, cityOptions } from '../types/inventory';
+import { hasApprovedRegistration } from '../utils/inventory';
 import { patrimonioSalvamentoNumbers } from './patrimonySalvamento';
 
 type CategorySeed = {
@@ -7,7 +8,6 @@ type CategorySeed = {
   count: number;
   baseValue: number;
   valueStep: number;
-  baseQuantity: number;
   descriptions: string[];
 };
 
@@ -18,7 +18,6 @@ const categorySeeds: CategorySeed[] = [
     count: 18,
     baseValue: 285000,
     valueStep: 18500,
-    baseQuantity: 1,
     descriptions: [
       'Caminhão Auto Bomba Tanque',
       'Viatura de Resgate e Salvamento',
@@ -37,7 +36,6 @@ const categorySeeds: CategorySeed[] = [
     count: 40,
     baseValue: 580,
     valueStep: 45,
-    baseQuantity: 4,
     descriptions: [
       'Mangueira de incêndio tipo 1 — 1 1/2 polegada',
       'Mangueira de incêndio tipo 2 — 2 1/2 polegadas',
@@ -56,7 +54,6 @@ const categorySeeds: CategorySeed[] = [
     count: 34,
     baseValue: 3200,
     valueStep: 390,
-    baseQuantity: 1,
     descriptions: [
       'Desencarcerador hidráulico combinado',
       'Cilindro hidráulico telescópico',
@@ -77,7 +74,6 @@ const categorySeeds: CategorySeed[] = [
     count: 45,
     baseValue: 680,
     valueStep: 58,
-    baseQuantity: 6,
     descriptions: [
       'Jaqueta de proteção para combate a incêndio',
       'Calça de proteção para combate a incêndio',
@@ -97,7 +93,6 @@ const categorySeeds: CategorySeed[] = [
     count: 25,
     baseValue: 920,
     valueStep: 125,
-    baseQuantity: 2,
     descriptions: [
       'Motosserra profissional de resgate',
       'Serra sabre elétrica',
@@ -117,7 +112,6 @@ const categorySeeds: CategorySeed[] = [
     count: 22,
     baseValue: 1450,
     valueStep: 180,
-    baseQuantity: 3,
     descriptions: [
       'Rádio comunicador portátil digital',
       'Rádio comunicador veicular',
@@ -135,7 +129,6 @@ const categorySeeds: CategorySeed[] = [
     count: 16,
     baseValue: 2600,
     valueStep: 275,
-    baseQuantity: 1,
     descriptions: [
       'Gerador elétrico portátil',
       'Torre de iluminação portátil',
@@ -231,10 +224,7 @@ const generatedInventory: InventoryItem[] = categorySeeds.flatMap(
         state,
         operationalStatus,
         valor: category.baseValue + index * category.valueStep,
-        quantidade:
-          category.baseQuantity === 1
-            ? 1
-            : category.baseQuantity + ((index + categoryIndex) % 4),
+        quantidade: 1 as const,
         nrPatrimonio: `CBM-${category.prefix}-${String(index + 1).padStart(4, '0')}`,
         status,
         cidade,
@@ -246,7 +236,7 @@ const generatedInventory: InventoryItem[] = categorySeeds.flatMap(
 
 let rescueVehicleIndex = 0;
 
-export const inventorySeed: InventoryItem[] = generatedInventory
+const individualInventory: InventoryItem[] = generatedInventory
   .slice(0, patrimonioSalvamentoNumbers.length)
   .map((item, index) => ({
     ...item,
@@ -267,5 +257,23 @@ export const inventorySeed: InventoryItem[] = generatedInventory
       status: 'active' as ItemStatus,
     };
   });
+
+export const inventorySeed: InventoryItem[] = individualInventory.map((item) => {
+  if (item.status !== 'pending' || !hasApprovedRegistration(individualInventory, item.description)) return item;
+  return {
+    ...item,
+    status: 'active',
+    history: [...item.history, {
+      id: `history-approved-registration-${item.uuid}`,
+      action: 'approved',
+      userId: 'system',
+      userName: 'Sistema',
+      timestamp: item.lastTimeTouched,
+      summary: 'Exemplar ativado por pertencer a um cadastro já aprovado.',
+      previousStatus: 'pending',
+      nextStatus: 'active',
+    }],
+  };
+});
 
 export const inventoryItemCount = inventorySeed.length;

@@ -29,6 +29,7 @@ test('loads the planned mock inventory size', () => {
   expect(inventorySeed).toHaveLength(patrimonioSalvamentoNumbers.length);
   expect(inventorySeed.map((item) => item.nrPatrimonio)).toEqual([...patrimonioSalvamentoNumbers]);
   expect(inventorySeed.every((item) => item.uuid && item.status)).toBe(true);
+  expect(inventorySeed.every((item) => item.quantidade === 1)).toBe(true);
 });
 
 test('allows repeated descriptions with unique patrimony numbers', () => {
@@ -101,6 +102,7 @@ test('almoxarife creates a pending item and sees the pending dashboard card', ()
   loginAs(/rafael almeida/i);
 
   fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
+  expect(screen.queryByLabelText('Quantidade')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/descrição do item/i), { target: { value: 'Motosserra para aprovação' } });
   fireEvent.change(screen.getByLabelText(/cidade\/unidade/i), { target: { value: 'EB ITA' } });
   fireEvent.click(screen.getByRole('option', { name: 'EB ITAPIRA' }));
@@ -177,6 +179,7 @@ test('inventory offers history, operational status filtering and configurable co
   loginAs(/mariana costa/i);
   await openInventory();
 
+  fireEvent.click(screen.getByRole('button', { name: 'Viatura de Resgate e Salvamento' }));
   expect(screen.getAllByRole('button', { name: /ver histórico/i }).length).toBeGreaterThan(0);
   fireEvent.click(screen.getAllByRole('button', { name: /ver histórico/i })[0]);
   expect(screen.getByRole('heading', { name: /histórico de alterações/i })).toBeInTheDocument();
@@ -202,4 +205,60 @@ test('keeps logout in the side navigation and toggles the theme from the top bar
 
   fireEvent.click(screen.getByRole('button', { name: /ativar modo claro/i }));
   expect(document.documentElement).not.toHaveClass('dark');
+});
+
+
+test('groups patrimonies by description and opens all units with their details', async () => {
+  render(<App />);
+  loginAs(/eduardo santos/i);
+  await openInventory();
+
+  const vehicles = inventorySeed.filter((item) => item.description === 'Viatura de Resgate e Salvamento');
+  const table = screen.getByRole('table', { name: 'Patrimônios por descrição' });
+  const button = within(table).getByRole('button', { name: 'Viatura de Resgate e Salvamento' });
+  const row = button.closest('tr')!;
+  const cells = within(row).getAllByRole('cell');
+  expect(cells.map((cell) => cell.textContent)).toEqual([
+    String(vehicles.length),
+    ...['operacional', 'em-manutencao', 'inservivel', 'em-transito'].map((status) => String(vehicles.filter((item) => item.operationalStatus === status).length)),
+    ...['active', 'pending', 'rejected', 'deactivated'].map((status) => String(vehicles.filter((item) => item.status === status).length)),
+  ]);
+  expect(cells[0]).toHaveTextContent('6');
+
+  fireEvent.change(screen.getByLabelText(/descrição ou patrimônio/i), { target: { value: vehicles[0].nrPatrimonio } });
+  fireEvent.click(screen.getByRole('button', { name: 'Viatura de Resgate e Salvamento' }));
+  expect(screen.getByRole('heading', { name: 'Viatura de Resgate e Salvamento' })).toBeInTheDocument();
+  vehicles.forEach((item) => expect(screen.getByText(item.nrPatrimonio)).toBeInTheDocument());
+  expect(screen.getAllByRole('columnheader')[0]).toHaveTextContent('Número de patrimônio');
+  expect(screen.queryByRole('columnheader', { name: 'Quantidade' })).not.toBeInTheDocument();
+  expect(screen.getByRole('columnheader', { name: 'Última movimentação' })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Ver histórico' })).toHaveLength(6);
+
+  fireEvent.click(screen.getByRole('button', { name: /voltar ao estoque patrimonial/i }));
+  expect(screen.getByLabelText(/descrição ou patrimônio/i)).toHaveValue(vehicles[0].nrPatrimonio);
+  expect(screen.getByRole('table', { name: 'Patrimônios por descrição' })).toBeInTheDocument();
+});
+
+
+test('almoxarife adds an active exemplar to an approved registration', async () => {
+  render(<App />);
+  loginAs(/rafael almeida/i);
+  fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
+  fireEvent.change(screen.getByLabelText(/descrição do item/i), { target: { value: '  VIATURA de Resgate e Salvamento  ' } });
+  fireEvent.change(screen.getByLabelText(/número de patrimônio/i), { target: { value: 'EXEMPLAR-APROVADO-001' } });
+  fireEvent.change(screen.getByLabelText(/valor unitário/i), { target: { value: '1000' } });
+  expect(within(screen.getByLabelText(/descrição do item/i).closest('form')!).getByText('Ativo')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
+  expect(screen.getByText('Novo patrimônio cadastrado como ativo.')).toBeInTheDocument();
+  logoutFromSideNav();
+  loginAs(/mariana costa/i);
+  await openInventory();
+  fireEvent.change(screen.getByLabelText(/descrição ou patrimônio/i), { target: { value: 'EXEMPLAR-APROVADO-001' } });
+  expect(screen.getByRole('button', { name: /viatura de resgate e salvamento/i })).toBeInTheDocument();
+});
+
+test('seed has no pending exemplars for approved registrations', () => {
+  const key = (value: string) => value.trim().toLowerCase();
+  const approved = new Set(inventorySeed.filter((item) => item.status === 'active').map((item) => key(item.description)));
+  expect(inventorySeed.filter((item) => item.status === 'pending' && approved.has(key(item.description)))).toHaveLength(0);
 });

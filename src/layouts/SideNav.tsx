@@ -9,7 +9,7 @@ const closingDurationMs = 300;
 
 type NavigationItem = {
   id: AppPage;
-  href: `#${AppPage}`;
+  href: string;
   icon: IconName;
   label: string;
 };
@@ -184,6 +184,9 @@ export function SideNav({
                     href={item.href}
                     aria-current={current ? 'page' : undefined}
                     onClick={(event) => {
+                      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                        return;
+                      }
                       event.preventDefault();
                       onNavigate(item.id);
                       onClose();

@@ -17,6 +17,8 @@ export type ItemState = 'novo' | 'bom' | 'regular';
 
 export type OperationalStatus = 'operacional' | 'em-manutencao' | 'inservivel' | 'em-transito';
 
+export type InventoryColumnKey = 'item' | 'nrPatrimonio' | 'uuid' | 'type' | 'cidade' | 'state' | 'operationalStatus' | 'valor' | 'status' | 'lastTimeTouched';
+
 export type InventoryHistoryAction = 'created' | 'edited' | 'approved' | 'rejected' | 'moved' | 'deactivated';
 
 export type InventoryHistoryEntry = {
@@ -32,7 +34,7 @@ export type InventoryHistoryEntry = {
   nextCity?: City;
 };
 
-export type AppPage = 'dashboard' | 'inventory';
+export type AppPage = 'dashboard' | 'inventory' | 'users' | 'profile';
 
 export type InventoryItem = {
   uuid: string;
@@ -41,7 +43,7 @@ export type InventoryItem = {
   state: ItemState;
   operationalStatus: OperationalStatus;
   valor: number;
-  quantidade: number;
+  quantidade: 1;
   nrPatrimonio: string;
   status: ItemStatus;
   cidade: City;
@@ -52,8 +54,13 @@ export type InventoryItem = {
 export type AppUser = {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   role: UserRole;
+  patente: string;
+  unidade: City | '';
+  telefoneContato: string;
 };
 
 export type InventoryFormValues = Omit<InventoryItem, 'uuid' | 'lastTimeTouched' | 'history'>;
@@ -63,6 +70,8 @@ export const roleLabels: Record<UserRole, string> = {
   almoxarife: 'Almoxarife',
   adm: 'Administrador',
 };
+
+export const userRoles: UserRole[] = Object.keys(roleLabels) as UserRole[];
 
 export const statusLabels: Record<ItemStatus, string> = {
   active: 'Ativo',

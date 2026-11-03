@@ -22,6 +22,7 @@ export const createCsvContent = <T,>(rows: T[], columns: ExportColumn<T>[]) => {
   return `\ufeff${[header, ...body].join('\r\n')}`;
 };
 
+/** @deprecated Use createReportHtml with openPrintReport for application PDF exports. */
 export const createPdfContent = <T,>(title: string, rows: T[], columns: ExportColumn<T>[]) => {
   const generatedAt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date());
   const tableHeader = columns.map((column) => column.label).join(' | ');

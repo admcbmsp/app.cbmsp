@@ -21,6 +21,13 @@ export const formatCurrency = (value: number) => currencyFormatter.format(value)
 export const formatQuantity = (value: number) =>
   new Intl.NumberFormat('pt-BR').format(value);
 
+const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  dateStyle: 'short',
+  timeStyle: 'short',
+});
+
+export const formatDateTime = (value: string) => dateTimeFormatter.format(new Date(value));
+
 export const visibleItemsForRole = (
   items: InventoryItem[],
   role: UserRole,
@@ -46,6 +53,9 @@ export const canEditAdministrativeFields = (role: UserRole) => role === 'adm';
 
 export const getRoleLabel = (role: UserRole) => roleLabels[role];
 
+export const getUserDisplayName = (user: Pick<AppUser, 'firstName' | 'lastName' | 'patente'>) =>
+  [user.patente.trim(), user.firstName.trim(), user.lastName.trim()].filter(Boolean).join(' ');
+
 export const getStatusLabel = (status: ItemStatus) => statusLabels[status];
 
 export const getStateLabel = (state: ItemState) => stateLabels[state];
@@ -53,8 +63,8 @@ export const getStateLabel = (state: ItemState) => stateLabels[state];
 export const getOperationalStatusLabel = (status: OperationalStatus) => operationalStatusLabels[status];
 
 export const getInitials = (user: AppUser) =>
-  user.name
-    .split(' ')
+  [user.firstName, user.lastName]
+    .filter(Boolean)
     .slice(0, 2)
     .map((name) => name[0])
     .join('')
@@ -119,3 +129,10 @@ export const getTypeIcon = (type: string) => {
 
   return icons[type] ?? 'IT';
 };
+
+
+export const descriptionKey = (description: string) => description.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
+
+export const hasApprovedRegistration = (items: InventoryItem[], description: string) =>
+  items.some((item) => descriptionKey(item.description) === descriptionKey(description)
+    && (item.status === 'active' || item.history.some((entry) => entry.action === 'approved' || entry.nextStatus === 'active')));

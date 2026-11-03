@@ -11,14 +11,30 @@ const pageDetails: Record<AppPage, { label: string; description: string }> = {
     description: 'Acompanhe o panorama do patrimônio operacional.',
   },
   inventory: {
-    label: 'Estoque patrimonial',
+    label: 'Controle de patrimônio',
     description: 'Consulte bens, estados físicos e pendências administrativas.',
+  },
+  users: {
+    label: 'Usuários',
+    description: 'Consulte contas e atualize seus perfis de acesso.',
+  },
+  profile: {
+    label: 'Perfil',
+    description: 'Atualize seus dados de identificação e contato.',
   },
 };
 
 const navigation = [
-  { id: 'dashboard', href: '#dashboard', icon: 'dashboard', label: 'Visão geral' },
-  { id: 'inventory', href: '#inventory', icon: 'archive', label: 'Estoque patrimonial' },
+  { id: 'dashboard', href: '#/dashboard', icon: 'dashboard', label: 'Visão geral' },
+  { id: 'inventory', href: '#/inventory', icon: 'archive', label: 'Controle de patrimônio' },
+] as const;
+
+const profileNavigation = { id: 'profile', href: '#/profile', icon: 'user', label: 'Perfil' } as const;
+const navigationWithProfile = [...navigation, profileNavigation] as const;
+const adminNavigation = [
+  ...navigation,
+  { id: 'users', href: '#/users', icon: 'users', label: 'Usuários' },
+  profileNavigation,
 ] as const;
 
 export type InventoryShellProps = {
@@ -35,6 +51,10 @@ export type InventoryShellProps = {
 export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, theme, onToggleTheme, children }: InventoryShellProps) {
   const [sideNavVisible, setSideNavVisible] = useState(false);
   const [sideNavClosing, setSideNavClosing] = useState(false);
+  const userNavigation = user.role === 'reader'
+    ? [{ id: 'inventory', href: '#/inventory', icon: 'archive', label: 'Consulta de ativos' }, profileNavigation] as const
+    : user.role === 'adm' ? adminNavigation : navigationWithProfile;
+  const currentPageLabel = user.role === 'reader' && page === 'inventory' ? 'Consulta de ativos' : pageDetails[page].label;
 
   const closeSideNav = useCallback(() => {
     setSideNavClosing(true);
@@ -91,7 +111,7 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
           </div>
 
           <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 sm:flex">
-            <span className="font-semibold tracking-tight text-white">{pageDetails[page].label}</span>
+            <span className="font-semibold tracking-tight text-white">{currentPageLabel}</span>
             <span className="h-1 w-1 rounded-full bg-primary" />
             <span className="text-xs text-slate-500">Protótipo local</span>
           </div>
@@ -121,7 +141,7 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
       <SideNav
         isClosing={sideNavClosing}
         isVisible={sideNavVisible}
-        navigation={navigation}
+        navigation={userNavigation}
         navigationLabel="Navegação principal"
         user={user}
         onClose={closeSideNav}
