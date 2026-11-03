@@ -2,7 +2,7 @@
 
 > Documento vivo para orientar a evolução do protótipo e a construção da aplicação real. Atualizar decisões e requisitos à medida que forem confirmados.
 >
-> Situação: rascunho · Atualizado em 03/11/2026 — escopo global por unidade, filtros múltiplos, templates locais, tabelas configuráveis, identidade visual oficial e diretrizes para portar a experiência web para React Native.
+> Situação: rascunho · Atualizado em 03/11/2026 — escopo global por unidade, tabelas responsivas, filtros múltiplos, templates locais, tabelas configuráveis, identidade visual oficial e diretrizes para portar a experiência web para React Native.
 >
 > Plano de organização e limpeza incremental do código: [PLANO_REFATORACAO_CODIGO.md](PLANO_REFATORACAO_CODIGO.md).
 
@@ -25,6 +25,7 @@ O protótipo atual contém:
 - Consulta de patrimônio com busca, filtros, agrupamento por descrição e acesso aos exemplares individuais.
 - Templates locais por usuário para salvar e restaurar filtros e colunas da consulta.
 - Tabela individual de patrimônios com colunas configuráveis, ordenação por valor e coluna de ações fixa no final.
+- Em telas abaixo de 1280 px, as tabelas de consulta exibem registros como cartões com rótulos; em telas maiores, preservam o formato tabular.
 - Logotipo oficial CBM SP nas áreas de marca, ícone do navegador e identidade instalada; cantos dos componentes com raio mais contido.
 - Cadastro e edição de patrimônios.
 - Aprovação e rejeição administrativa.
@@ -87,7 +88,7 @@ O usuário deve poder exportar os dados que seu perfil está autorizado a consul
 
 ### RC-10 — Uso responsivo
 
-A aplicação web deve funcionar em telas pequenas e grandes. A menor tela aceita para o layout é 375 × 667 CSS px; a validação deve considerar que as barras do navegador reduzem a área realmente visível. A versão mobile deve oferecer jornadas equivalentes compatíveis com o uso em campo.
+A aplicação web deve funcionar em telas pequenas e grandes. A menor tela aceita para o layout é 375 × 667 CSS px; a validação deve considerar que as barras do navegador reduzem a área realmente visível. Abaixo de 1280 px, tabelas de consulta devem se reorganizar em cartões com rótulos por campo para evitar rolagem horizontal da página; telas maiores preservam as tabelas e podem rolar horizontalmente quando o usuário habilitar muitas colunas. A versão mobile deve oferecer jornadas equivalentes compatíveis com o uso em campo.
 
 ### RC-11 — Acessibilidade e idioma
 
@@ -107,7 +108,7 @@ O usuário deve poder salvar localmente uma consulta nomeada com seus filtros e 
 
 ### RC-15 — Tabelas configuráveis
 
-Na tabela de exemplares, o usuário deve poder mostrar ou ocultar colunas disponíveis, mudar a ordem das colunas e ordenar as linhas em ordem crescente ou decrescente pelo valor da coluna. A última coluna deve conter um botão de três pontos que abre o menu de ações disponíveis para aquele registro, respeitando o perfil do usuário. A coluna de ações permanece visível e sempre é a última. A coluna Número de patrimônio também é obrigatória. A ordem de colunas configurada deve ser usada na tabela e nas exportações, e incluída nos templates de consulta.
+Na tabela de exemplares, o usuário deve poder mostrar ou ocultar colunas disponíveis, mudar a ordem das colunas e ordenar as linhas em ordem crescente ou decrescente pelo valor da coluna. Em telas compactas, os mesmos campos devem aparecer em cartões com rótulos e um controle de ordenação acessível. A última coluna deve conter um botão de três pontos que abre o menu de ações disponíveis para aquele registro, respeitando o perfil do usuário. A coluna de ações permanece visível e sempre é a última. A coluna Número de patrimônio também é obrigatória. A ordem de colunas configurada deve ser usada na tabela e nas exportações, e incluída nos templates de consulta.
 
 ### RC-16 — Identidade visual e adaptação mobile
 
@@ -176,6 +177,7 @@ O usuário deve poder selecionar a unidade de atuação pela navegação lateral
 - Manter regras de domínio, tipos, validações, permissões, combinações de filtros, serialização do estado de consulta e modelo dos templates independentes de DOM, CSS, navegador e APIs nativas.
 - Definir contratos de serviço comuns e implementar adaptadores por plataforma para recursos que diferem: armazenamento local, navegação/deep links, impressão e PDF, compartilhamento, dimensões da tela, áreas seguras e teclado virtual.
 - Construir a interface web responsiva e acessível desde o início. Na versão nativa, adaptar apresentação e interação para controles e convenções mobile, preservando os mesmos fluxos e regras de negócio. Não pressupor que HTML, CSS ou componentes DOM podem ser reutilizados diretamente em React Native.
+- Preservar o modelo e os dados das tabelas configuráveis entre plataformas. Na web, linhas de tabela tornam-se cartões rotulados em telas menores; no React Native, usar uma apresentação nativa equivalente.
 - Manter tokens de cor, espaçamento, tipografia e estados de interação documentados para reproduzir a identidade visual nas duas plataformas.
 
 ### Arquitetura e código

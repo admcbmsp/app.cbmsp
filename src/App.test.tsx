@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import App from './App';
 import { inventorySeed } from './data/inventory';
 import { patrimonioSalvamentoNumbers } from './data/patrimonySalvamento';
-import { City } from './types/inventory';
+import { City, itemStatuses, operationalStatuses, operationalStatusLabels, statusLabels } from './types/inventory';
 import { formatCurrency } from './utils/inventory';
 
 beforeEach(() => {
@@ -225,6 +225,11 @@ test('groups patrimonies by description and opens all units with their details',
   const button = within(table).getByRole('button', { name: 'Viatura de Resgate e Salvamento' });
   const row = button.closest('tr')!;
   const cells = within(row).getAllByRole('cell');
+  expect(cells.map((cell) => cell.getAttribute('data-label'))).toEqual([
+    'Total',
+    ...operationalStatuses.map((status) => operationalStatusLabels[status]),
+    ...itemStatuses.map((status) => statusLabels[status]),
+  ]);
   expect(cells.map((cell) => cell.textContent)).toEqual([
     String(vehicles.length),
     ...['operacional', 'em-manutencao', 'inservivel', 'em-transito'].map((status) => String(vehicles.filter((item) => item.operationalStatus === status).length)),

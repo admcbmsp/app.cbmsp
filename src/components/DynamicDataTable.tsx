@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import { TableActionMenu } from './TableActionMenu';
 import type { TableAction } from './TableActionMenu';
@@ -42,6 +42,7 @@ export function DynamicDataTable<T, Key extends string = string>({
 }: DynamicDataTableProps<T, Key>) {
   const [sort, setSort] = useState<SortState<Key>>(null);
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+  const mobileSortId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const columnsByKey = useMemo(() => new Map(columns.map((column) => [column.key, column])), [columns]);
@@ -180,17 +181,40 @@ export function DynamicDataTable<T, Key extends string = string>({
             </div>
           )}
         </div>
-        <span className="text-xs text-slate-400">Clique no título para ordenar</span>
+        <span className="hidden text-xs text-slate-400 xl:block">Clique no título para ordenar</span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-3 xl:hidden">
+        <label htmlFor={mobileSortId} className="text-xs font-semibold text-slate-500">Ordenar por</label>
+        <select
+          id={mobileSortId}
+          value={sortedColumn ? sort?.key ?? '' : ''}
+          onChange={(event) => setSort(event.target.value ? { key: event.target.value as Key, direction: 'asc' } : null)}
+          className="h-9 min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700"
+        >
+          <option value="">Ordem original</option>
+          {visibleColumns.filter((column) => column.sortValue).map((column) => <option key={column.key} value={column.key}>{column.label}</option>)}
+        </select>
+        <button
+          type="button"
+          aria-label={`Inverter ordem. Atual: ${sortedColumn && sort?.direction === 'desc' ? 'decrescente' : 'crescente'}`}
+          disabled={!sortedColumn}
+          onClick={() => setSort((current) => current ? { ...current, direction: current.direction === 'asc' ? 'desc' : 'asc' } : current)}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Icon name={sort?.direction === 'desc' ? 'arrow-down' : 'arrow-up'} className="h-4 w-4" />
+          {sortedColumn && sort?.direction === 'desc' ? 'Decrescente' : 'Crescente'}
+        </button>
       </div>
 
       <div className="overflow-x-auto">
-        <table aria-label={ariaLabel} className="min-w-max w-full text-left text-sm">
-          <thead className="bg-slate-50/80 text-[10px] uppercase tracking-[0.13em] text-slate-500">
-            <tr>
+        <table role="table" aria-label={ariaLabel} className="responsive-card-table min-w-max w-full text-left text-sm">
+          <thead className="sr-only bg-slate-50/80 text-[10px] uppercase tracking-[0.13em] text-slate-500 xl:not-sr-only">
+            <tr role="row">
               {visibleColumns.map((column) => {
                 const direction = sort?.key === column.key ? sort.direction : null;
                 return (
-                  <th key={column.key} scope="col" aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'} className={`px-4 py-3 font-bold first:pl-5 sm:first:pl-6 ${column.numeric ? 'text-right' : ''}`}>
+                  <th key={column.key} role="columnheader" scope="col" aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'} className={`px-4 py-3 font-bold first:pl-5 sm:first:pl-6 ${column.numeric ? 'text-right' : ''}`}>
                     {column.sortValue ? (
                       <button type="button" onClick={() => toggleSort(column.key)} className={`inline-flex items-center gap-1.5 ${column.numeric ? 'ml-auto' : ''} rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}>
                         {column.label}
@@ -200,18 +224,18 @@ export function DynamicDataTable<T, Key extends string = string>({
                   </th>
                 );
               })}
-              <th scope="col" aria-sort="none" className="sticky right-0 z-10 bg-slate-50 px-4 py-3 text-right font-bold sm:px-6">{actionLabel}</th>
+              <th role="columnheader" scope="col" aria-sort="none" className="bg-slate-50 px-4 py-3 text-right font-bold sm:px-6 xl:sticky xl:right-0 xl:z-10">{actionLabel}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="xl:divide-y xl:divide-slate-100">
             {sortedRows.map((row) => (
-              <tr key={getRowKey(row)} className={`group ${COLOR_TRANSITION_CLASS} hover:bg-slate-50/70`}>
+              <tr key={getRowKey(row)} role="row" className={`group ${COLOR_TRANSITION_CLASS} hover:bg-slate-50/70`}>
                 {visibleColumns.map((column) => (
-                  <td key={column.key} className={`px-4 py-4 first:pl-5 sm:first:pl-6 ${column.numeric ? 'text-right tabular-nums' : ''}`}>
+                  <td key={column.key} role="cell" data-label={column.label} className={`px-4 py-4 first:pl-5 sm:first:pl-6 ${column.numeric ? 'text-right tabular-nums' : ''}`}>
                     {column.renderCell(row)}
                   </td>
                 ))}
-                <td data-row-actions className="sticky right-0 z-[1] bg-white px-4 py-4 text-right transition-colors duration-150 group-hover:bg-slate-50/70 sm:px-6">
+                <td role="cell" data-label={actionLabel} data-row-actions className="bg-white px-4 py-4 text-right transition-colors duration-150 group-hover:bg-slate-50/70 xl:sticky xl:right-0 xl:z-[1] sm:px-6">
                   <TableActionMenu label={getActionMenuLabel(row)} actions={getActions(row)} />
                 </td>
               </tr>

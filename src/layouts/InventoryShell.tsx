@@ -109,7 +109,7 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
             </div>
           </div>
 
-          <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 sm:flex">
+          <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 md:flex">
             <span className="font-semibold tracking-tight text-white">{currentPageLabel}</span>
             <span className="h-1 w-1 rounded-full bg-primary" />
             <span className="max-w-[30vw] truncate text-xs text-slate-400" title={`Unidade: ${selectedUnit ?? 'Todas as unidades'}`}>Unidade: {selectedUnit ?? 'Todas as unidades'}</span>
@@ -133,7 +133,7 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
       </header>
 
       <div aria-hidden="true" className="h-16 shrink-0" />
-      <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-4rem)] px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-9">
+      <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-4rem)] w-full min-w-0 px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-9">
         {children}
       </main>
 

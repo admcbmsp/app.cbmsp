@@ -932,26 +932,26 @@ function InventoryPage({
         </div>
         {selectedDescription === null ? (
           <div className="overflow-x-auto">
-            <table aria-label="Patrimônios por descrição" className="w-full min-w-[1200px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs text-slate-500">
-                <tr>
-                  <th scope="col" rowSpan={2} className="px-5 py-3">Item</th>
-                  <th scope="col" rowSpan={2} className="px-4 py-3">Total</th>
-                  <th scope="colgroup" colSpan={operationalStatuses.length} className="px-4 py-3 text-center">Estado operacional</th>
-                  <th scope="colgroup" colSpan={itemStatuses.length} className="px-4 py-3 text-center">Status administrativo</th>
+            <table role="table" aria-label="Patrimônios por descrição" className="responsive-card-table w-full min-w-[1200px] text-left text-sm">
+              <thead className="sr-only bg-slate-50 text-xs text-slate-500 xl:not-sr-only">
+                <tr role="row">
+                  <th role="columnheader" scope="col" rowSpan={2} className="px-5 py-3">Item</th>
+                  <th role="columnheader" scope="col" rowSpan={2} className="px-4 py-3">Total</th>
+                  <th role="columnheader" scope="colgroup" colSpan={operationalStatuses.length} className="px-4 py-3 text-center">Estado operacional</th>
+                  <th role="columnheader" scope="colgroup" colSpan={itemStatuses.length} className="px-4 py-3 text-center">Status administrativo</th>
                 </tr>
-                <tr>
-                  {operationalStatuses.map((status) => <th scope="col" key={status} className="px-4 py-3">{operationalStatusLabels[status]}</th>)}
-                  {itemStatuses.map((status) => <th scope="col" key={status} className="px-4 py-3">{statusLabels[status]}</th>)}
+                <tr role="row">
+                  {operationalStatuses.map((status) => <th role="columnheader" scope="col" key={status} className="px-4 py-3">{operationalStatusLabels[status]}</th>)}
+                  {itemStatuses.map((status) => <th role="columnheader" scope="col" key={status} className="px-4 py-3">{statusLabels[status]}</th>)}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="xl:divide-y xl:divide-slate-100">
                 {groups.map(([description, rows]) => (
-                  <tr key={description} className="hover:bg-slate-50">
-                    <th scope="row" className="px-5 py-4"><button type="button" onClick={() => { setSelectedDescription(description); setSuggestionsOpen(false); }} className="text-left font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline">{description}</button></th>
-                    <td className="px-4 py-4 font-bold">{formatQuantity(rows.length)}</td>
-                    {operationalStatuses.map((status) => <td key={status} className="px-4 py-4">{formatQuantity(rows.filter((item) => item.operationalStatus === status).length)}</td>)}
-                    {itemStatuses.map((status) => <td key={status} className="px-4 py-4">{formatQuantity(rows.filter((item) => item.status === status).length)}</td>)}
+                  <tr key={description} role="row" className="hover:bg-slate-50">
+                    <th role="rowheader" scope="row" className="px-5 py-4"><button type="button" onClick={() => { setSelectedDescription(description); setSuggestionsOpen(false); }} className="text-left font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline">{description}</button></th>
+                    <td role="cell" data-label="Total" className="px-4 py-4 font-bold">{formatQuantity(rows.length)}</td>
+                    {operationalStatuses.map((status) => <td role="cell" key={status} data-label={operationalStatusLabels[status]} className="px-4 py-4">{formatQuantity(rows.filter((item) => item.operationalStatus === status).length)}</td>)}
+                    {itemStatuses.map((status) => <td role="cell" key={status} data-label={statusLabels[status]} className="px-4 py-4">{formatQuantity(rows.filter((item) => item.status === status).length)}</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -1012,14 +1012,14 @@ function HistoryDrawer({
     <div className="fixed inset-0 z-40 flex justify-end">
       <button type="button" aria-label="Fechar detalhes" onClick={onClose} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
       <aside className="relative flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
-        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
-          <div>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-5 sm:px-6">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Histórico</p>
-            <h2 className="mt-2 max-w-sm text-xl font-semibold leading-7 text-slate-950">Histórico de alterações</h2>
-            <p className="mt-1 text-sm font-medium text-slate-600">{item.description}</p>
-            <p className="mt-1 text-xs text-slate-500">Patrimônio {item.nrPatrimonio} · {item.cidade}</p>
+            <h2 className="mt-2 max-w-sm break-words text-xl font-semibold leading-7 text-slate-950">Histórico de alterações</h2>
+            <p className="mt-1 break-words text-sm font-medium text-slate-600">{item.description}</p>
+            <p className="mt-1 break-words text-xs text-slate-500">Patrimônio {item.nrPatrimonio} · {item.cidade}</p>
           </div>
-          <IconButton label="Fechar histórico" onClick={onClose}><Icon name="close" className="h-5 w-5" /></IconButton>
+          <IconButton label="Fechar histórico" onClick={onClose} className="shrink-0"><Icon name="close" className="h-5 w-5" /></IconButton>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -1053,7 +1053,7 @@ function HistoryDrawer({
             ))}
           </div>
         </div>
-        <div className="border-t border-slate-100 px-6 py-5">
+        <div className="border-t border-slate-100 px-4 py-5 sm:px-6">
           <Button variant="ghost" onClick={onClose} className="w-full">Fechar histórico</Button>
         </div>
       </aside>
@@ -1259,9 +1259,9 @@ function ToastBanner({ toast, onClose }: { toast: Toast; onClose: () => void }) 
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-[60] flex max-w-sm items-start gap-3 rounded-md border border-emerald-200 bg-white px-4 py-3 shadow-xl shadow-slate-900/10">
+    <div className="fixed bottom-4 left-4 right-4 z-[60] flex w-auto max-w-sm items-start gap-3 rounded-md border border-emerald-200 bg-white px-4 py-3 shadow-xl shadow-slate-900/10 sm:bottom-5 sm:left-auto sm:right-5">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600"><Icon name={toast.tone === 'success' ? 'check' : 'info'} className="h-4 w-4" /></div>
-      <div className="flex-1 pt-0.5"><p className="text-sm font-semibold text-slate-800">{toast.message}</p><p className="mt-0.5 text-xs text-slate-500">{toast.detail ?? 'Alteração aplicada apenas nesta sessão.'}</p></div>
+      <div className="min-w-0 flex-1 break-words pt-0.5"><p className="text-sm font-semibold text-slate-800">{toast.message}</p><p className="mt-0.5 text-xs text-slate-500">{toast.detail ?? 'Alteração aplicada apenas nesta sessão.'}</p></div>
       <IconButton label="Fechar mensagem" onClick={onClose} className="-mr-2 -mt-2"><Icon name="close" className="h-4 w-4" /></IconButton>
     </div>
   );

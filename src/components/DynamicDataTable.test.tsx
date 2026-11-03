@@ -84,6 +84,24 @@ test('sorts rows by column value ascending, descending and back to source order'
   fireEvent.click(screen.getByRole('button', { name: 'Valor' }));
   expect(getFirstDataRow()).toHaveTextContent('120');
   expect(screen.getByRole('columnheader', { name: 'Valor' })).toHaveAttribute('aria-sort', 'none');
+
+  fireEvent.change(screen.getByLabelText('Ordenar por'), { target: { value: 'value' } });
+  expect(getFirstDataRow()).toHaveTextContent('45');
+  fireEvent.click(screen.getByRole('button', { name: 'Inverter ordem. Atual: crescente' }));
+  expect(getFirstDataRow()).toHaveTextContent('120');
+});
+
+test('provides a field label for each responsive card cell', () => {
+  renderTable();
+  const table = screen.getByRole('table', { name: 'Tabela de teste' });
+  const firstDataRow = within(table).getAllByRole('row')[1];
+
+  expect(within(firstDataRow).getAllByRole('cell').map((cell) => cell.getAttribute('data-label'))).toEqual([
+    'Patrimônio',
+    'Unidade',
+    'Valor',
+    'Ações',
+  ]);
 });
 
 test('shows row actions in a three-dot menu and runs the selected action', () => {
