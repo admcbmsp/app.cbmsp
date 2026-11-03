@@ -1,18 +1,18 @@
 import {
   ButtonHTMLAttributes,
   FormEvent,
-  InputHTMLAttributes,
   ReactNode,
-  SelectHTMLAttributes,
   useEffect,
   useMemo,
   useState,
 } from 'react';
 import { Icon } from './components/Icon';
 import { Dialog } from './components/Dialog';
+import { OperationalStatusBadge, StateBadge, StatusBadge } from './components/inventory/StatusBadges';
 import { FilterDropdown } from './components/FilterDropdown';
 import { InventoryViewTemplates } from './components/InventoryViewTemplates';
 import { EditUserRoleModal } from './components/users/EditUserRoleModal';
+import { Label as FieldLabel, SelectInput, TextInput } from './library';
 import { inventorySeed } from './data/inventory';
 import { demoPassword, demoUsers } from './data/users';
 import { InventoryShell } from './layouts/InventoryShell';
@@ -48,13 +48,7 @@ import {
   formatCurrency,
   formatDateTime,
   formatQuantity,
-  getOperationalStatusClasses,
-  getOperationalStatusLabel,
   getRoleLabel,
-  getStateClasses,
-  getStateLabel,
-  getStatusClasses,
-  getStatusLabel,
   getTypeIcon,
   getTypeLabel,
   getUserDisplayName,
@@ -229,57 +223,6 @@ function IconButton({
     >
       {children}
     </button>
-  );
-}
-
-function FieldLabel({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
-  return (
-    <label htmlFor={htmlFor} className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-      {children}
-    </label>
-  );
-}
-
-function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={`h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none ${COLOR_TRANSITION_CLASS} placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-[var(--color-focus)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${props.className ?? ''}`}
-    />
-  );
-}
-
-function SelectInput(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      {...props}
-      className={`h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none ${COLOR_TRANSITION_CLASS} focus:border-primary focus:ring-4 focus:ring-[var(--color-focus)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${props.className ?? ''}`}
-    />
-  );
-}
-
-function StatusBadge({ status }: { status: ItemStatus }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusClasses(status)}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {getStatusLabel(status)}
-    </span>
-  );
-}
-
-function StateBadge({ state }: { state: ItemState }) {
-  return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStateClasses(state)}`}>
-      {getStateLabel(state)}
-    </span>
-  );
-}
-
-function OperationalStatusBadge({ status }: { status: OperationalStatus }) {
-  return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getOperationalStatusClasses(status)}`}>
-      {getOperationalStatusLabel(status)}
-    </span>
   );
 }
 

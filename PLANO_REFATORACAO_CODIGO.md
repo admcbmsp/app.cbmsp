@@ -121,6 +121,8 @@ Próximas ações desta etapa:
 - [x] Auditar estrutura, duplicações e componentes existentes.
 - [x] Criar o shell compartilhado para diálogos e migrar três usos.
 - [ ] Validar os diálogos visualmente e consolidar os controles locais com `src/library`.
+- [x] Adicionar `TextInput` e `SelectInput` básicos à biblioteca e substituir as versões locais de `App.tsx`.
+- [x] Extrair os badges de status do inventário para um componente reutilizável.
 - [ ] Extrair telas e componentes de inventário de `App.tsx`.
 - [ ] Separar operações e regras em domínio/serviços.
 - [ ] Revisar enums, tokens e responsividade ao longo da migração.

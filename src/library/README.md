@@ -12,8 +12,11 @@ import {
   Heading,
   Icon,
   InputField,
+  Label,
   LinkButton,
+  SelectInput,
   SelectField,
+  TextInput,
 } from './library';
 ```
 
@@ -45,3 +48,15 @@ Tamanhos disponíveis: `sm`, `md` e `lg`.
 ```
 
 Todos os campos suportam `label`, `description`, `error`, `required`, `disabled` e `fieldClassName`.
+
+Para compor o rótulo e o controle separadamente, use os primitivos básicos:
+
+```tsx
+<Label htmlFor="unit">Unidade</Label>
+<SelectInput id="unit" value={unit} onChange={handleUnitChange}>
+  <option value="">Selecione</option>
+  <option value="capital">Capital</option>
+</SelectInput>
+
+<TextInput aria-label="Buscar patrimônio" value={query} onChange={handleQueryChange} />
+```
