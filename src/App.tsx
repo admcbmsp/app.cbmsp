@@ -600,6 +600,47 @@ const inventoryDetailColumns: DynamicDataTableColumn<InventoryItem, InventoryCol
   { key: 'lastTimeTouched', label: 'Última movimentação', sortValue: (item) => Date.parse(item.lastTimeTouched), renderCell: (item) => <span className="whitespace-nowrap text-xs text-slate-500">{formatDateTime(item.lastTimeTouched)}</span> },
 ];
 
+type InventoryGroupRow = [string, InventoryItem[]];
+type InventoryGroupColumnKey = 'description' | 'total' | `operational:${OperationalStatus}` | `status:${ItemStatus}`;
+
+const defaultInventoryGroupColumns: InventoryGroupColumnKey[] = [
+  'description',
+  'total',
+  ...operationalStatuses.map((status) => `operational:${status}` as const),
+  ...itemStatuses.map((status) => `status:${status}` as const),
+];
+
+const inventoryGroupColumns: DynamicDataTableColumn<InventoryGroupRow, InventoryGroupColumnKey>[] = [
+  {
+    key: 'description',
+    label: 'Item',
+    locked: true,
+    sortValue: ([description]) => description,
+    renderCell: ([description]) => <span className="font-medium text-foreground">{description}</span>,
+  },
+  {
+    key: 'total',
+    label: 'Total',
+    numeric: true,
+    sortValue: ([, rows]) => rows.length,
+    renderCell: ([, rows]) => <span className="font-semibold tabular-nums text-foreground">{formatQuantity(rows.length)}</span>,
+  },
+  ...operationalStatuses.map((status) => ({
+    key: `operational:${status}` as InventoryGroupColumnKey,
+    label: operationalStatusLabels[status],
+    numeric: true,
+    sortValue: ([, rows]: InventoryGroupRow) => rows.filter((item) => item.operationalStatus === status).length,
+    renderCell: ([, rows]: InventoryGroupRow) => <span className="tabular-nums text-foreground">{formatQuantity(rows.filter((item) => item.operationalStatus === status).length)}</span>,
+  })),
+  ...itemStatuses.map((status) => ({
+    key: `status:${status}` as InventoryGroupColumnKey,
+    label: statusLabels[status],
+    numeric: true,
+    sortValue: ([, rows]: InventoryGroupRow) => rows.filter((item) => item.status === status).length,
+    renderCell: ([, rows]: InventoryGroupRow) => <span className="tabular-nums text-foreground">{formatQuantity(rows.filter((item) => item.status === status).length)}</span>,
+  })),
+];
+
 function InventoryPage({
   user,
   items,
@@ -636,6 +677,7 @@ function InventoryPage({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<InventoryColumnKey[]>(defaultInventoryColumns);
+  const [visibleGroupColumns, setVisibleGroupColumns] = useState<InventoryGroupColumnKey[]>(defaultInventoryGroupColumns);
   const [autoApplyDefaultOnEntry] = useState(() => initialFilter === null);
 
   useEffect(() => {
@@ -931,32 +973,24 @@ function InventoryPage({
           <div className="hidden items-center gap-2 text-xs text-slate-400 sm:flex"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Dados locais</div>
         </div>
         {selectedDescription === null ? (
-          <div className="overflow-x-auto">
-            <table role="table" aria-label="Patrimônios por descrição" className="responsive-card-table w-full min-w-[1200px] text-left text-sm">
-              <thead className="sr-only bg-slate-50 text-xs text-slate-500 xl:not-sr-only">
-                <tr role="row">
-                  <th role="columnheader" scope="col" rowSpan={2} className="px-5 py-3">Item</th>
-                  <th role="columnheader" scope="col" rowSpan={2} className="px-4 py-3">Total</th>
-                  <th role="columnheader" scope="colgroup" colSpan={operationalStatuses.length} className="px-4 py-3 text-center">Estado operacional</th>
-                  <th role="columnheader" scope="colgroup" colSpan={itemStatuses.length} className="px-4 py-3 text-center">Status administrativo</th>
-                </tr>
-                <tr role="row">
-                  {operationalStatuses.map((status) => <th role="columnheader" scope="col" key={status} className="px-4 py-3">{operationalStatusLabels[status]}</th>)}
-                  {itemStatuses.map((status) => <th role="columnheader" scope="col" key={status} className="px-4 py-3">{statusLabels[status]}</th>)}
-                </tr>
-              </thead>
-              <tbody className="xl:divide-y xl:divide-slate-100">
-                {groups.map(([description, rows]) => (
-                  <tr key={description} role="row" className="hover:bg-slate-50">
-                    <th role="rowheader" scope="row" className="px-5 py-4"><button type="button" onClick={() => { setSelectedDescription(description); setSuggestionsOpen(false); }} className="text-left font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline">{description}</button></th>
-                    <td role="cell" data-label="Total" className="px-4 py-4 font-bold">{formatQuantity(rows.length)}</td>
-                    {operationalStatuses.map((status) => <td role="cell" key={status} data-label={operationalStatusLabels[status]} className="px-4 py-4">{formatQuantity(rows.filter((item) => item.operationalStatus === status).length)}</td>)}
-                    {itemStatuses.map((status) => <td role="cell" key={status} data-label={statusLabels[status]} className="px-4 py-4">{formatQuantity(rows.filter((item) => item.status === status).length)}</td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DynamicDataTable<InventoryGroupRow, InventoryGroupColumnKey>
+            ariaLabel="Patrimônios por descrição"
+            rows={groups}
+            columns={inventoryGroupColumns}
+            visibleColumnKeys={visibleGroupColumns}
+            defaultColumnKeys={defaultInventoryGroupColumns}
+            onVisibleColumnKeysChange={setVisibleGroupColumns}
+            getRowKey={([description]) => description}
+            getRowLabel={([description]) => `Abrir patrimônios de ${description}`}
+            onRowClick={([description]) => { setSelectedDescription(description); setSuggestionsOpen(false); }}
+            getActionMenuLabel={([description]) => `Ações para ${description}`}
+            getActions={([description]): TableAction[] => [{
+              key: 'open',
+              label: 'Abrir patrimônios',
+              icon: 'eye',
+              onSelect: () => { setSelectedDescription(description); setSuggestionsOpen(false); },
+            }]}
+          />
         ) : (
           <>
             <div className="flex flex-wrap gap-3 px-5 py-3">

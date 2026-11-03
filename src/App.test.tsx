@@ -186,7 +186,9 @@ test('inventory offers history, operational status filtering and configurable co
   loginAs(/mariana costa/i);
   await openInventory();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Viatura de Resgate e Salvamento' }));
+  const groupedTable = screen.getByRole('table', { name: 'Patrimônios por descrição' });
+  const groupedRow = within(groupedTable).getByRole('row', { name: 'Abrir patrimônios de Viatura de Resgate e Salvamento' });
+  fireEvent.click(within(groupedRow).getByRole('cell', { name: 'Viatura de Resgate e Salvamento' }));
   fireEvent.click(screen.getAllByRole('button', { name: /ações para viatura de resgate e salvamento/i })[0]);
   fireEvent.click(screen.getByRole('menuitem', { name: /ver histórico/i }));
   expect(screen.getByRole('heading', { name: /histórico de alterações/i })).toBeInTheDocument();
@@ -222,23 +224,30 @@ test('groups patrimonies by description and opens all units with their details',
 
   const vehicles = inventorySeed.filter((item) => item.description === 'Viatura de Resgate e Salvamento');
   const table = screen.getByRole('table', { name: 'Patrimônios por descrição' });
-  const button = within(table).getByRole('button', { name: 'Viatura de Resgate e Salvamento' });
-  const row = button.closest('tr')!;
+  const row = within(table).getByRole('row', { name: 'Abrir patrimônios de Viatura de Resgate e Salvamento' });
+  expect(screen.getByRole('button', { name: /configurar colunas/i })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /configurar colunas/i }));
+  expect(screen.getByRole('checkbox', { name: 'Item' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Concluir' }));
+  expect(within(row).getByText('Viatura de Resgate e Salvamento')).toHaveClass('text-foreground');
   const cells = within(row).getAllByRole('cell');
   expect(cells.map((cell) => cell.getAttribute('data-label'))).toEqual([
+    'Item',
     'Total',
     ...operationalStatuses.map((status) => operationalStatusLabels[status]),
     ...itemStatuses.map((status) => statusLabels[status]),
+    'Ações',
   ]);
-  expect(cells.map((cell) => cell.textContent)).toEqual([
+  expect(cells.slice(1, -1).map((cell) => cell.textContent)).toEqual([
     String(vehicles.length),
     ...['operacional', 'em-manutencao', 'inservivel', 'em-transito'].map((status) => String(vehicles.filter((item) => item.operationalStatus === status).length)),
     ...['active', 'pending', 'rejected', 'deactivated'].map((status) => String(vehicles.filter((item) => item.status === status).length)),
   ]);
-  expect(cells[0]).toHaveTextContent('6');
+  expect(cells[1]).toHaveTextContent('6');
 
   fireEvent.change(screen.getByLabelText(/descrição ou patrimônio/i), { target: { value: vehicles[0].nrPatrimonio } });
-  fireEvent.click(screen.getByRole('button', { name: 'Viatura de Resgate e Salvamento' }));
+  const filteredRow = within(table).getByRole('row', { name: 'Abrir patrimônios de Viatura de Resgate e Salvamento' });
+  fireEvent.click(within(filteredRow).getAllByRole('cell')[1]);
   expect(screen.getByRole('heading', { name: 'Viatura de Resgate e Salvamento' })).toBeInTheDocument();
   vehicles.forEach((item) => expect(screen.getByText(item.nrPatrimonio)).toBeInTheDocument());
   expect(screen.getAllByRole('columnheader')[0]).toHaveTextContent('Número de patrimônio');
@@ -267,7 +276,7 @@ test('applies the selected unit across the dashboard, inventory and URL', async 
   const unitItems = inventorySeed.filter((item) => item.cidade === City.EB_HOLAMBRA);
   const expectedDescriptions = Array.from(new Set(unitItems.map((item) => item.description))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const inventoryTable = screen.getByRole('table', { name: 'Patrimônios por descrição' });
-  expect(within(inventoryTable).getAllByRole('rowheader').map((row) => row.textContent)).toEqual(expectedDescriptions);
+  expect(within(inventoryTable).getAllByRole('row').slice(1).map((row) => row.querySelector('[data-label="Item"]')?.textContent)).toEqual(expectedDescriptions);
 
   fireEvent.click(screen.getByRole('button', { name: /abrir navega/i }));
   fireEvent.click(screen.getByRole('link', { name: 'Visão geral' }));

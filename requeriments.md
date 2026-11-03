@@ -22,9 +22,10 @@ Oferecer uma aplicação para consultar e controlar bens patrimoniais, acompanha
 O protótipo atual contém:
 
 - Visão geral com indicadores, pendências e movimentações recentes.
-- Consulta de patrimônio com busca, filtros, agrupamento por descrição e acesso aos exemplares individuais.
+- Consulta de patrimônio com busca, filtros, agrupamento por descrição e acesso aos exemplares individuais; a linha agrupada abre os detalhes ao clicar em qualquer célula e também pode ser acionada pelo teclado.
 - Templates locais por usuário para salvar e restaurar filtros e colunas da consulta.
-- Tabela individual de patrimônios com colunas configuráveis, ordenação por valor e coluna de ações fixa no final.
+- Tabelas agrupada e individual com controle para mostrar, ocultar, reordenar e ordenar colunas; na tabela individual, a coluna de ações fica fixa no final.
+- Tabelas com cabeçalho neutro, linhas alternadas, divisórias suaves e destaque discreto ao passar o cursor, seguindo as classes semânticas de Tailwind do Troi e os tokens de cor do tema CBM SP.
 - Em telas abaixo de 1280 px, as tabelas de consulta exibem registros como cartões com rótulos; em telas maiores, preservam o formato tabular.
 - Logotipo oficial CBM SP nas áreas de marca, ícone do navegador e identidade instalada; cantos dos componentes com raio mais contido.
 - Cadastro e edição de patrimônios.
@@ -64,7 +65,7 @@ O usuário deve conseguir localizar patrimônio por descrição e número patrim
 
 ### RC-04 — Agrupamento e detalhe
 
-Resultados podem ser agrupados por descrição para apresentar totais. O usuário deve poder abrir o grupo e consultar cada exemplar individual, identificado pelo seu número patrimonial.
+Resultados podem ser agrupados por descrição para apresentar totais. O usuário deve poder abrir o grupo ao selecionar qualquer ponto da linha ou usando o teclado, e consultar cada exemplar individual, identificado pelo seu número patrimonial. O nome do item usa a cor neutra do texto; a interação é indicada pela linha inteira e seu realce de foco/hover, e a cor não representa status patrimonial.
 
 ### RC-05 — Cadastro
 
@@ -108,7 +109,7 @@ O usuário deve poder salvar localmente uma consulta nomeada com seus filtros e 
 
 ### RC-15 — Tabelas configuráveis
 
-Na tabela de exemplares, o usuário deve poder mostrar ou ocultar colunas disponíveis, mudar a ordem das colunas e ordenar as linhas em ordem crescente ou decrescente pelo valor da coluna. Em telas compactas, os mesmos campos devem aparecer em cartões com rótulos e um controle de ordenação acessível. A última coluna deve conter um botão de três pontos que abre o menu de ações disponíveis para aquele registro, respeitando o perfil do usuário. A coluna de ações permanece visível e sempre é a última. A coluna Número de patrimônio também é obrigatória. A ordem de colunas configurada deve ser usada na tabela e nas exportações, e incluída nos templates de consulta.
+Nas tabelas agrupada e de exemplares, o usuário deve poder mostrar ou ocultar colunas disponíveis, mudar a ordem das colunas e ordenar as linhas em ordem crescente ou decrescente pelo valor da coluna. A descrição é obrigatória na tabela agrupada; Número de patrimônio é obrigatório na tabela de exemplares. Clicar ou focar uma linha agrupada abre os exemplares dessa descrição. Em telas compactas, os mesmos campos devem aparecer em cartões com rótulos e um controle de ordenação acessível. A última coluna das duas tabelas contém um botão de três pontos: na tabela agrupada, ele abre os exemplares daquela descrição; na tabela de exemplares, abre as ações disponíveis para aquele registro, respeitando o perfil do usuário. A coluna de ações permanece visível e sempre é a última. A ordem de colunas da tabela de exemplares deve ser usada nas exportações e incluída nos templates de consulta.
 
 ### RC-16 — Identidade visual e adaptação mobile
 

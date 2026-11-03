@@ -97,7 +97,7 @@ export function TableActionMenu({ label, actions }: TableActionMenuProps) {
   };
 
   const toneClasses = {
-    default: 'text-slate-700 hover:bg-slate-50',
+    default: 'text-foreground hover:bg-muted/50',
     success: 'text-emerald-700 hover:bg-emerald-50',
     danger: 'text-rose-700 hover:bg-rose-50',
   };
@@ -110,11 +110,12 @@ export function TableActionMenu({ label, actions }: TableActionMenuProps) {
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={isOpen}
+        data-row-control
         onClick={() => {
           setMenuStyle(null);
           setIsOpen((current) => !current);
         }}
-        className={`inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 ${COLOR_TRANSITION_CLASS} hover:bg-slate-100 hover:text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground ${COLOR_TRANSITION_CLASS} hover:bg-muted/50 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
       >
         <Icon name="more-horizontal" className="h-5 w-5" />
         <span className="sr-only">Abrir menu de ações</span>
@@ -126,7 +127,7 @@ export function TableActionMenu({ label, actions }: TableActionMenuProps) {
           aria-label={label}
           onKeyDown={handleMenuKeyDown}
           style={{ position: 'fixed', top: 8, right: 8, ...menuStyle, visibility: menuStyle ? 'visible' : 'hidden' }}
-          className="z-[100] min-w-52 overflow-hidden rounded-md border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/15"
+          className="z-[100] min-w-52 overflow-hidden rounded-md border border-line bg-card p-1.5 shadow-xl shadow-slate-900/15"
         >
           {actions.map((action) => (
             <button

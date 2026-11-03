@@ -23,7 +23,11 @@ const columns: DynamicDataTableColumn<RecordRow, ColumnKey>[] = [
   { key: 'value', label: 'Valor', numeric: true, sortValue: (row) => row.value, renderCell: (row) => String(row.value) },
 ];
 
-const renderTable = (visibleColumnKeys: ColumnKey[] = ['asset', 'city', 'value'], onAction: (row: RecordRow) => void = () => undefined) => {
+const renderTable = (
+  visibleColumnKeys: ColumnKey[] = ['asset', 'city', 'value'],
+  onAction: (row: RecordRow) => void = () => undefined,
+  onRowClick?: (row: RecordRow) => void,
+) => {
   function TableHarness() {
     const [selectedColumns, setSelectedColumns] = useState(visibleColumnKeys);
     return (
@@ -35,6 +39,8 @@ const renderTable = (visibleColumnKeys: ColumnKey[] = ['asset', 'city', 'value']
         defaultColumnKeys={['asset', 'city', 'value']}
         onVisibleColumnKeysChange={setSelectedColumns}
         getRowKey={(row) => row.id}
+        getRowLabel={(row) => `Abrir item ${row.asset}`}
+        onRowClick={onRowClick}
         getActionMenuLabel={(row) => `Ações para ${row.asset}`}
         getActions={(row) => [{ key: 'view', label: 'Ver item', icon: 'eye', onSelect: () => onAction(row) }]}
       />
@@ -114,4 +120,22 @@ test('shows row actions in a three-dot menu and runs the selected action', () =>
 
   expect(onAction).toHaveBeenCalledWith(rows[0]);
   expect(screen.queryByRole('menu', { name: 'Ações para Mangueira' })).not.toBeInTheDocument();
+});
+
+test('opens a row from any cell or keyboard while keeping the action menu separate', () => {
+  const onRowClick = jest.fn();
+  renderTable(undefined, undefined, onRowClick);
+
+  const table = screen.getByRole('table', { name: 'Tabela de teste' });
+  const row = within(table).getByRole('row', { name: 'Abrir item Mangueira' });
+  fireEvent.click(within(row).getByRole('cell', { name: 'EB ITAPIRA' }));
+  expect(onRowClick).toHaveBeenCalledWith(rows[0]);
+
+  onRowClick.mockClear();
+  fireEvent.click(screen.getByRole('button', { name: 'Ações para Mangueira' }));
+  expect(onRowClick).not.toHaveBeenCalled();
+  fireEvent.keyDown(document, { key: 'Escape' });
+
+  fireEvent.keyDown(row, { key: 'Enter' });
+  expect(onRowClick).toHaveBeenCalledWith(rows[0]);
 });
