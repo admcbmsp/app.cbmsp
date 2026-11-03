@@ -2,7 +2,7 @@
 
 Protótipo navegável de controle de bens permanentes do Corpo de Bombeiros, com dados locais, 140 patrimônios importados da planilha de salvamento e três perfis demonstrativos.
 
-O protótipo inclui aprovação de novos patrimônios, status `active`, `pending`, `rejected` e `deactivated`, status operacional conforme I-23-PM, cidade/unidade, histórico por item, `lastTimeTouched`, tabela configurável e exportação CSV/PDF. A interface usa o logotipo vetorial oficial `cbmsp.svg`, uma paleta semântica com azul como `primary`, vermelho reservado para erro/rejeição, tema claro/escuro, raios de 2 ou 4 px nos componentes e um registro único de ícones no padrão Lucide.
+O protótipo inclui aprovação de novos patrimônios, **Cadastro** (`active`, `pending`, `rejected` e `deactivated`), **Operação** conforme I-23-PM, cidade/unidade, histórico por item, `lastTimeTouched`, tabela configurável e exportação CSV/PDF. A interface usa o logotipo vetorial oficial `cbmsp.svg`, uma paleta semântica com azul como `primary`, vermelho reservado para erro/rejeição, tema claro/escuro, raios de 2 ou 4 px nos componentes e um registro único de ícones no padrão Lucide.
 
 As tabelas de consulta mudam para cartões rotulados em telas com menos de 1280 px para manter todos os campos legíveis sem expandir a página horizontalmente. Em telas maiores, seguem como tabelas configuráveis.
 

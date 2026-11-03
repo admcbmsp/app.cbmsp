@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { BrandLogo } from '../components/BrandLogo';
 import { UnitScopeSelector } from '../components/UnitScopeSelector';
-import { Icon, IconButton, IconName, cn } from '../library';
+import { Icon, IconName, cn } from '../library';
 import { COLOR_TRANSITION_CLASS } from '../theme/motion';
-import { AppPage, AppUser, City } from '../types/inventory';
-import { getInitials, getRoleLabel } from '../utils/inventory';
+import { AppPage, City } from '../types/inventory';
 
 const sideNavId = 'inventory-side-navigation';
 const closingDurationMs = 300;
@@ -21,7 +19,6 @@ export type SideNavProps = {
   isVisible: boolean;
   navigation: ReadonlyArray<NavigationItem>;
   navigationLabel: string;
-  user: AppUser;
   selectedUnit: City | null;
   unitOptions: readonly City[];
   onSelectUnit: (unit: City | null) => void;
@@ -38,7 +35,6 @@ export function SideNav({
   isVisible,
   navigation,
   navigationLabel,
-  user,
   selectedUnit,
   unitOptions,
   onSelectUnit,
@@ -144,7 +140,7 @@ export function SideNav({
         aria-label="Fechar navegação lateral"
         onClick={onClose}
         className={cn(
-          'absolute inset-0 bg-slate-950/60 motion-safe:transition-opacity motion-safe:duration-300 motion-safe:ease-out',
+          'application-backdrop absolute inset-0 motion-safe:transition-opacity motion-safe:duration-300 motion-safe:ease-out',
           isClosing || !isEntered ? 'opacity-0' : 'opacity-100',
         )}
       />
@@ -158,19 +154,6 @@ export function SideNav({
           isClosing || !isEntered ? '-translate-x-full' : 'translate-x-0',
         )}
       >
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-3">
-            <BrandLogo className="h-10 w-10" />
-            <div>
-              <p className="text-sm font-bold tracking-[0.18em] text-white">CBM SP</p>
-              <p className="text-xs text-slate-400">Almoxarifado</p>
-            </div>
-          </div>
-          <IconButton label="Fechar navegação" onClick={onClose} className="border-transparent text-slate-400 hover:bg-white/10 hover:text-white">
-            <Icon name="close" className="h-5 w-5" />
-          </IconButton>
-        </div>
-
         <UnitScopeSelector
           options={unitOptions}
           selectedUnit={selectedUnit}
@@ -190,7 +173,7 @@ export function SideNav({
           <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">Navegação principal</p>
           <ul className="grid gap-1">
             {navigation.map((item) => {
-              const current = page === item.id;
+              const current = page === item.id || (page === 'details' && item.id === 'inventory');
               return (
                 <li key={item.id}>
                   <a
@@ -230,17 +213,15 @@ export function SideNav({
           </button>
         </div>
 
-        <div className="mt-auto border-t border-white/10 pt-5">
-          <div className="flex items-center gap-3 rounded-md px-2 py-2">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-focus)] text-xs font-bold text-primary">{getInitials(user)}</div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-              <p className="truncate text-xs text-slate-500">{getRoleLabel(user.role)}</p>
-            </div>
-            <IconButton label="Sair" onClick={onLogout} className="border-transparent text-slate-500 hover:bg-white/10 hover:text-white">
-              <Icon name="logout" className="h-4 w-4" />
-            </IconButton>
-          </div>
+        <div className="mt-auto border-t border-white/10 pt-4">
+          <button
+            type="button"
+            onClick={onLogout}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-slate-300 ${COLOR_TRANSITION_CLASS} hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+          >
+            <Icon name="logout" className="h-5 w-5 shrink-0" />
+            Sair
+          </button>
         </div>
       </nav>
     </div>

@@ -1,4 +1,4 @@
-import { City, InventoryHistoryEntry, InventoryItem, ItemState, ItemStatus, OperationalStatus, cityOptions } from '../types/inventory';
+import { City, InventoryHistoryEntry, InventoryItem, ItemState, ItemStatus, OperationalStatus, cityOptions, statusLabels } from '../types/inventory';
 import { hasApprovedRegistration } from '../utils/inventory';
 import { patrimonioSalvamentoNumbers } from './patrimonySalvamento';
 
@@ -196,7 +196,7 @@ const makeSeedHistory = (itemIndex: number, status: ItemStatus, cidade: City): I
   userId: 'seed-import',
   userName: 'Importação da planilha',
   timestamp: `2026-10-${String((itemIndex % 28) + 1).padStart(2, '0')}T12:00:00.000Z`,
-  summary: `Registro importado para ${cidade}. Status inicial: ${status}.`,
+  summary: `Registro importado para ${cidade}. Cadastro inicial: ${statusLabels[status]}.`,
   nextStatus: status,
   nextCity: cidade,
 }];

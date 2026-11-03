@@ -3,7 +3,7 @@ import { BrandLogo } from '../components/BrandLogo';
 import { Icon, IconButton } from '../library';
 import { ThemeMode } from '../theme/theme';
 import { AppPage, AppUser, City } from '../types/inventory';
-import { getCityLabel, getInitials, getRoleLabel } from '../utils/inventory';
+import { getInitials, getRoleLabel } from '../utils/inventory';
 import { SideNav } from './SideNav';
 
 const pageDetails: Record<AppPage, { label: string; description: string }> = {
@@ -14,6 +14,10 @@ const pageDetails: Record<AppPage, { label: string; description: string }> = {
   inventory: {
     label: 'Controle de patrimônio',
     description: 'Consulte bens, estados físicos e pendências administrativas.',
+  },
+  details: {
+    label: 'Detalhes do patrimônio',
+    description: 'Consulte os patrimônios individuais deste item.',
   },
   users: {
     label: 'Usuários',
@@ -86,7 +90,7 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="application-shell bg-slate-100 text-slate-900">
       <header className="fixed inset-x-0 top-0 z-30 h-16 border-b border-slate-800 bg-slate-950 text-slate-100 shadow-lg shadow-slate-950/20">
         <div className="relative mx-auto flex h-full w-full items-center px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-2">
@@ -111,8 +115,6 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
 
           <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 md:flex">
             <span className="font-semibold tracking-tight text-white">{currentPageLabel}</span>
-            <span className="h-1 w-1 rounded-full bg-primary" />
-            <span className="max-w-[30vw] truncate text-xs text-slate-400" title={`Unidade: ${selectedUnit ? getCityLabel(selectedUnit) : 'Todas as unidades'}`}>Unidade: {selectedUnit ? getCityLabel(selectedUnit) : 'Todas as unidades'}</span>
           </div>
 
           <div className="ml-auto flex items-center gap-3">
@@ -132,17 +134,18 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
         </div>
       </header>
 
-      <div aria-hidden="true" className="h-16 shrink-0" />
-      <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-4rem)] w-full min-w-0 px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-9">
-        {children}
-      </main>
+      <div className="application-container">
+        <div aria-hidden="true" className="h-16 shrink-0" />
+        <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-4rem)] w-full min-w-0 flex-1 px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-9">
+          {children}
+        </main>
+      </div>
 
       <SideNav
         isClosing={sideNavClosing}
         isVisible={sideNavVisible}
         navigation={userNavigation}
         navigationLabel="Navegação principal"
-        user={user}
         selectedUnit={selectedUnit}
         unitOptions={Object.values(City)}
         onSelectUnit={onSelectUnit}

@@ -4,16 +4,19 @@ Implementation: [`DynamicDataTable.tsx`](./DynamicDataTable.tsx)
 
 ## Purpose and boundaries
 
-Render a configurable, sortable inventory table with responsive card presentation, row activation, and per-row action menus. The table owns column ordering/visibility interaction and sort state. Consumers own the data, column definitions, visible-column state, row actions, and any business rules.
+Render a generic table from consumer-supplied rows and cell renderers. Optional capabilities add column configuration, sorting, pagination, row activation, and per-row action menus. The component owns enabled table interactions; consumers own the data and business rules.
 
 ## Public contract
 
-- `ariaLabel`, `rows`, `columns`, `visibleColumnKeys`, `defaultColumnKeys`, `onVisibleColumnKeysChange`, `getRowKey`, and `getActions` are required.
-- `onRowClick`, `getRowLabel`, `getActionMenuLabel`, `actionLabel`, and `columnControlTarget` are optional.
+- `ariaLabel`, `rows`, `columns`, and `getRowKey` are required.
+- `visibleColumnKeys`, `defaultColumnKeys`, and `onVisibleColumnKeysChange` are optional. Supply all three to enable the column picker; when omitted, all columns are shown in their declared order.
+- `getActions` is optional. Supplying it adds the final actions column and its per-row menu.
+- `onRowClick`, `getRowLabel`, `getActionMenuLabel`, `actionLabel`, `columnControlTarget`, `pagination`, and `emptyState` are optional.
 - Columns provide a stable key, display label, and cell renderer; `sortValue` enables sorting, `locked` prevents hiding, `numeric` enables tabular numerals, and optional `align` sets the horizontal alignment of both the header and body cell.
 - `align` accepts `start`, `center`, or `end` and defaults to `center`. Use logical alignment so start/end follow writing direction. `actionAlign` controls the actions header/body cells and also defaults to `center`.
 - Example: set `align: 'start'` on a long description column; leave counts and status columns unset to use the centered default.
-- The column visibility list is controlled by the consumer. The component reports changes through `onVisibleColumnKeysChange` and does not persist them itself.
+- The column visibility list is controlled by the consumer when the picker is enabled. The component reports changes through `onVisibleColumnKeysChange` and does not persist them itself.
+- `pagination` defaults to `true`. Set it to `false` to render all rows without a page-size control or footer. `emptyState` supplies optional content for a zero-row table.
 - `columnControlTarget` controls where the column picker is rendered: omitted (`undefined`) means render it as a standalone control before the table; an `HTMLDivElement` renders it into that host with a React portal; `null` means an external host is expected but not ready, so the picker is temporarily not rendered. A consumer using an external host must keep it mounted while the table needs the control.
 
 ## Behavior and states
@@ -25,17 +28,17 @@ Render a configurable, sortable inventory table with responsive card presentatio
 - Rows are sorted before pagination. The table starts at 10 rows per page and offers 10, 25, and 50. Changing the source rows or page size returns to page 1; page navigation is bounded by the current result count.
 - The footer's range and page count describe table rows (descriptions in grouped view, individual assets in detail view), not the underlying asset totals.
 - A row can be activated with Enter or Space when `onRowClick` is supplied; interactive controls inside the row do not trigger row activation.
-- Per-row actions are supplied by `getActions`; permission checks and business rules must be applied by the consumer and, in production, by the server.
+- Per-row actions appear only when `getActions` is supplied; permission checks and business rules must be applied by the consumer and, in production, by the server.
 
 ## UI and accessibility
 
-- At compact widths, the table uses the project's responsive card-table styles and a labeled sort control. At larger widths, it presents table headings and rows.
+- At compact widths, the table retains its headings and rows and scrolls horizontally inside its bordered wrapper. The table uses its content-driven width with a 100% minimum, so columns stay wide enough for their content. When any visible column is sortable, the labeled sort control is available above it.
 - The table border encloses only the horizontally scrollable table. The results heading and any consumer-placed column control remain outside it; the default column control is rendered as a simple standalone control before the table, without a padded toolbar or sort instruction.
-- The pagination footer follows the table as an unboxed row with a small gap. It is visually detached from the table border.
-- Apply each column's alignment consistently to its header and body cell. Responsive card cells preserve the selected logical text alignment for their values while keeping the field label readable.
-- At table widths, separate adjacent header and body columns with a vertical border using the theme border token. Keep compact card rows free of column dividers.
-- Row hover uses the full muted-surface token for a clearer highlight; the sticky actions cell follows the same hover state.
-- Expose the page-size select, result range, current page, and previous/next controls with accessible names.
+- When pagination is enabled, its footer follows the table as an unboxed row with a small gap. It is visually detached from the table border.
+- Apply each column's alignment consistently to its header and body cell. Keep column content and headings aligned while the table scrolls.
+- Keep row dividers and the theme border around the scroll container consistent at all widths. The actions column becomes sticky only at wide breakpoints so it does not cover content while narrow tables scroll.
+- Row hover changes the row background to the muted-surface token; cell text keeps its normal foreground or muted color. The sticky actions cell follows the same background state. Consumer cell renderers should not add row-hover text color changes.
+- When pagination is enabled, expose the page-size select, result range, current page, and previous/next controls with accessible names.
 - Keep control labels, focus treatment, required-column indication, and action-menu accessible names clear. Preserve keyboard operation when changing the picker placement.
 - The picker menu is positioned relative to its own trigger. If it is portaled, the consumer-provided host determines its placement in the surrounding layout.
 
@@ -47,9 +50,9 @@ Render a configurable, sortable inventory table with responsive card presentatio
 
 ## Placement decision and rationale
 
-The grouped asset lookup places its column control beside the filters, while the individual-item view places it beside the results heading. `columnControlTarget` lets `DynamicDataTable` retain ownership of picker state and behavior while rendering the same control in a consumer-selected host. This avoids a second picker implementation and keeps both table variants consistent.
+The grouped asset lookup places its column control beside the filters, while the individual-item view places it beside the results heading. `columnControlTarget` lets `DynamicDataTable` retain ownership of picker state and behavior while rendering the same control in a consumer-selected host. The dashboard's recent-movements table uses this component with fixed columns, row activation, no action menu, and pagination disabled.
 
-An alternative is to extract a separately controlled column-picker component. That would make the placement contract more explicit, but it would move state/behavior out of the table and expand the component API. Revisit this choice if other screens need independent picker ownership or if portal placement causes layout/accessibility issues.
+Keep optional capabilities disabled when a consumer needs a simple fixed table. This lets data tables share rendering, responsive scrolling, row interaction, and theme styling without showing controls that do not fit the view.
 
 ## Verification
 

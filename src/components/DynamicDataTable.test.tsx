@@ -97,17 +97,16 @@ test('sorts rows by column value ascending, descending and back to source order'
   expect(getFirstDataRow()).toHaveTextContent('120');
 });
 
-test('provides a field label for each responsive card cell', () => {
+test('keeps table headings visible inside a horizontally scrollable, content-sized table', () => {
   renderTable();
   const table = screen.getByRole('table', { name: 'Tabela de teste' });
-  const firstDataRow = within(table).getAllByRole('row')[1];
+  const header = table.querySelector('thead');
 
-  expect(within(firstDataRow).getAllByRole('cell').map((cell) => cell.getAttribute('data-label'))).toEqual([
-    'Patrimônio',
-    'Unidade',
-    'Valor',
-    'Ações',
-  ]);
+  expect(table.parentElement).toHaveClass('overflow-x-auto');
+  expect(table).toHaveClass('w-max', 'min-w-full');
+  expect(header).not.toHaveClass('sr-only');
+  expect(screen.getByRole('columnheader', { name: 'Patrimônio' })).toBeInTheDocument();
+  expect(table.querySelectorAll('tbody tr')).toHaveLength(rows.length);
 });
 
 test('shows row actions in a three-dot menu and runs the selected action', () => {

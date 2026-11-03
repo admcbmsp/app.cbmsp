@@ -19,7 +19,7 @@ export type OperationalStatus = 'operacional' | 'em-manutencao' | 'inservivel' |
 
 export type InventoryColumnKey = 'item' | 'nrPatrimonio' | 'uuid' | 'type' | 'cidade' | 'state' | 'operationalStatus' | 'valor' | 'status' | 'lastTimeTouched';
 
-export type InventoryHistoryAction = 'created' | 'edited' | 'approved' | 'rejected' | 'moved' | 'deactivated';
+export type InventoryHistoryAction = 'created' | 'edited' | 'administrativeStatusChanged' | 'approved' | 'rejected' | 'moved' | 'deactivated';
 
 export type InventoryHistoryEntry = {
   id: string;
@@ -34,7 +34,7 @@ export type InventoryHistoryEntry = {
   nextCity?: City;
 };
 
-export type AppPage = 'dashboard' | 'inventory' | 'users' | 'profile';
+export type AppPage = 'dashboard' | 'inventory' | 'details' | 'users' | 'profile';
 
 export type InventoryItem = {
   uuid: string;
@@ -78,6 +78,16 @@ export const statusLabels: Record<ItemStatus, string> = {
   deactivated: 'Desativado',
   pending: 'Pendente',
   rejected: 'Rejeitado',
+};
+
+export const inventoryHistoryActionLabels: Record<InventoryHistoryAction, string> = {
+  created: 'Cadastro',
+  edited: 'Edição de dados',
+  administrativeStatusChanged: 'Cadastro alterado',
+  approved: 'Aprovação',
+  rejected: 'Rejeição',
+  moved: 'Transferência',
+  deactivated: 'Desativação',
 };
 
 export const stateLabels: Record<ItemState, string> = {

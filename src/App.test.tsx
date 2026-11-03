@@ -4,6 +4,7 @@ import { inventorySeed } from './data/inventory';
 import { patrimonioSalvamentoNumbers } from './data/patrimonySalvamento';
 import { City, itemStatuses, operationalStatuses, operationalStatusLabels, statusLabels } from './types/inventory';
 import { formatCurrency } from './utils/inventory';
+import { parseAppRoute } from './utils/appRouting';
 
 beforeEach(() => {
   window.history.replaceState(window.history.state, '', '#/dashboard');
@@ -100,6 +101,30 @@ test('admin sees the create action after login', () => {
   expect(screen.getAllByRole('button', { name: /novo item/i }).length).toBeGreaterThan(0);
 });
 
+test('uses the shared backdrop effect for side navigation and dialogs', async () => {
+  render(<App />);
+  loginAs(/rafael almeida/i);
+
+  fireEvent.click(screen.getByRole('button', { name: /abrir navegação/i }));
+  const sideNavigation = screen.getByRole('navigation', { name: /navegação/i });
+  const sideNavigationBackdrop = screen.getByRole('button', { name: 'Fechar navegação lateral' });
+  expect(sideNavigationBackdrop).toHaveClass('application-backdrop');
+  expect(within(screen.getByRole('banner')).getByText('CBM SP')).toBeInTheDocument();
+  expect(within(sideNavigation).queryByText('CBM SP')).not.toBeInTheDocument();
+  expect(within(screen.getByRole('banner')).getByText('Rafael Almeida')).toBeInTheDocument();
+  expect(within(sideNavigation).queryByText('Rafael Almeida')).not.toBeInTheDocument();
+  expect(within(screen.getByRole('banner')).queryByText(/Unidade:/i)).not.toBeInTheDocument();
+  expect(within(sideNavigation).getByRole('button', { name: /selecionar unidade/i })).toHaveTextContent('Todas as unidades');
+  expect(within(sideNavigation).queryByRole('button', { name: 'Fechar navegação' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Fechar navegação' }));
+  await waitFor(() => expect(screen.queryByRole('navigation', { name: /navegação/i })).not.toBeInTheDocument());
+
+  fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
+  const dialog = screen.getByRole('dialog');
+  expect(dialog.parentElement?.querySelector('.application-backdrop')).toBeInTheDocument();
+});
+
 test('almoxarife creates a pending item and sees the pending dashboard card', () => {
   render(<App />);
   loginAs(/rafael almeida/i);
@@ -107,8 +132,8 @@ test('almoxarife creates a pending item and sees the pending dashboard card', ()
   fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
   expect(screen.queryByLabelText('Quantidade')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/descrição do item/i), { target: { value: 'Motosserra para aprovação' } });
-  fireEvent.change(screen.getByLabelText(/cidade\/unidade/i), { target: { value: 'EB ITA' } });
-  fireEvent.click(screen.getByRole('option', { name: 'EB ITAPIRA' }));
+  fireEvent.change(screen.getByLabelText(/cidade\/unidade/i), { target: { value: 'Ita' } });
+  fireEvent.click(screen.getByRole('option', { name: 'Itapira' }));
   fireEvent.change(screen.getByLabelText(/valor unitário/i), { target: { value: '1000' } });
   fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
 
@@ -129,10 +154,10 @@ test('city autocomplete limits suggestions and requires an offered city', () => 
   const cityList = screen.getByRole('listbox');
   expect(within(cityList).getAllByRole('option')).toHaveLength(4);
 
-  fireEvent.change(cityInput, { target: { value: 'EB ITA' } });
-  expect(within(screen.getByRole('listbox')).getByRole('option', { name: 'EB ITAPIRA' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('option', { name: 'EB ITAPIRA' }));
-  expect(cityInput).toHaveValue('EB ITAPIRA');
+  fireEvent.change(cityInput, { target: { value: 'Ita' } });
+  expect(within(screen.getByRole('listbox')).getByRole('option', { name: 'Itapira' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('option', { name: 'Itapira' }));
+  expect(cityInput).toHaveValue('Itapira');
 });
 
 test('gestor approves a pending item and it becomes visible to the reader', async () => {
@@ -146,7 +171,7 @@ test('gestor approves a pending item and it becomes visible to the reader', asyn
   logoutFromSideNav();
   loginAs(/eduardo santos/i);
   fireEvent.click(screen.getByRole('button', { name: /editar item pendente: Motosserra aprovada/i }));
-  fireEvent.change(screen.getByLabelText(/status administrativo/i), { target: { value: 'active' } });
+  fireEvent.change(screen.getByLabelText(/^cadastro$/i), { target: { value: 'active' } });
   fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
   expect(screen.getByText(/registro atualizado com sucesso/i)).toBeInTheDocument();
 
@@ -169,7 +194,7 @@ test('gestor can reject a pending item and reader cannot consult it', async () =
   logoutFromSideNav();
   loginAs(/eduardo santos/i);
   fireEvent.click(screen.getByRole('button', { name: /editar item pendente: Motosserra rejeitada/i }));
-  fireEvent.change(screen.getByLabelText(/status administrativo/i), { target: { value: 'rejected' } });
+  fireEvent.change(screen.getByLabelText(/^cadastro$/i), { target: { value: 'rejected' } });
   fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
   expect(screen.getByText(/registro atualizado com sucesso/i)).toBeInTheDocument();
 
@@ -260,6 +285,47 @@ test('groups patrimonies by description and opens all units with their details',
   expect(screen.getByRole('table', { name: 'Patrimônios por descrição' })).toBeInTheDocument();
 });
 
+test('opens a grouped inventory detail route and returns with its filters and unit intact', async () => {
+  window.history.replaceState(window.history.state, '', '#/inventory?unit=all&q=Adaptador');
+  render(<App />);
+  loginAs(/eduardo santos/i);
+
+  const table = screen.getByRole('table', { name: 'Patrimônios por descrição' });
+  const row = within(table).getByRole('row', { name: 'Abrir patrimônios de Adaptador storz de engate rápido' });
+  fireEvent.click(row);
+
+  await waitFor(() => expect(parseAppRoute(window.location.hash)).toMatchObject({
+    page: 'details',
+    description: 'Adaptador storz de engate rápido',
+    filter: { query: 'Adaptador' },
+    unit: null,
+    hasUnit: true,
+  }));
+  expect(screen.getByRole('heading', { name: 'Adaptador storz de engate rápido' })).toBeInTheDocument();
+
+  window.history.back();
+  await waitFor(() => expect(parseAppRoute(window.location.hash)).toMatchObject({
+    page: 'inventory',
+    filter: { query: 'Adaptador' },
+    unit: null,
+    hasUnit: true,
+  }));
+
+  const inventoryTable = screen.getByRole('table', { name: 'Patrimônios por descrição' });
+  const inventoryRow = within(inventoryTable).getByRole('row', { name: 'Abrir patrimônios de Adaptador storz de engate rápido' });
+  fireEvent.click(inventoryRow);
+  await waitFor(() => expect(parseAppRoute(window.location.hash).page).toBe('details'));
+
+  fireEvent.click(screen.getByRole('button', { name: /voltar ao estoque patrimonial/i }));
+  expect(parseAppRoute(window.location.hash)).toMatchObject({
+    page: 'inventory',
+    filter: { query: 'Adaptador' },
+    unit: null,
+    hasUnit: true,
+  });
+  expect(screen.getByLabelText(/descrição ou patrimônio/i)).toHaveValue('Adaptador');
+});
+
 test('applies the selected unit across the dashboard, inventory and URL', async () => {
   render(<App />);
   loginAs(/eduardo santos/i);
@@ -267,7 +333,7 @@ test('applies the selected unit across the dashboard, inventory and URL', async 
   fireEvent.click(screen.getByRole('button', { name: /abrir navega/i }));
   fireEvent.click(screen.getByRole('button', { name: /selecionar unidade/i }));
   const unitOptions = screen.getByRole('group', { name: 'Unidade global' });
-  fireEvent.click(within(unitOptions).getByRole('button', { name: City.EB_HOLAMBRA }));
+  fireEvent.click(within(unitOptions).getByRole('button', { name: 'Holambra' }));
 
   await waitFor(() => expect(window.location.hash).toContain('unit=EB+HOLAMBRA'));
   await waitFor(() => expect(screen.getByRole('main')).not.toHaveAttribute('aria-hidden'));
@@ -289,7 +355,7 @@ test('applies the selected unit across the dashboard, inventory and URL', async 
   const pendingSection = screen.getByText('Itens pendentes de aprovação').closest('section')!;
   const pendingButtons = within(pendingSection).queryAllByRole('button');
   expect(pendingButtons).toHaveLength(unitItems.filter((item) => item.status === 'pending').length);
-  pendingButtons.forEach((button) => expect(button).toHaveTextContent(City.EB_HOLAMBRA));
+  pendingButtons.forEach((button) => expect(button).toHaveTextContent('Holambra'));
 });
 
 

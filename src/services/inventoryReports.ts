@@ -12,9 +12,9 @@ export const inventoryColumnOptions: Array<{ key: InventoryColumnKey; label: str
   { key: 'type', label: 'Tipo' },
   { key: 'cidade', label: 'Cidade/unidade' },
   { key: 'state', label: 'Condição' },
-  { key: 'operationalStatus', label: 'Status operacional' },
+  { key: 'operationalStatus', label: 'Operação' },
   { key: 'valor', label: 'Valor estimado' },
-  { key: 'status', label: 'Status administrativo' },
+  { key: 'status', label: 'Cadastro' },
   { key: 'lastTimeTouched', label: 'Última movimentação' },
 ];
 

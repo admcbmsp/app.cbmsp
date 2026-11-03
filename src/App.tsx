@@ -13,6 +13,7 @@ import { DynamicDataTable } from './components/DynamicDataTable';
 import type { TableAction } from './components/TableActionMenu';
 import { FilterDropdown } from './components/FilterDropdown';
 import { InventoryViewTemplates } from './components/InventoryViewTemplates';
+import { RecentMovementsTable } from './components/inventory/RecentMovementsTable';
 import { BadgeKind, StatusBadge } from './components/inventory/StatusBadge';
 import { EditUserRoleModal } from './components/users/EditUserRoleModal';
 import { Label as FieldLabel, SelectInput, TextInput } from './library';
@@ -35,6 +36,7 @@ import {
   OperationalStatus,
   UserRole,
   cityOptions,
+  inventoryHistoryActionLabels,
   itemStates,
   itemStatuses,
   operationalStatuses,
@@ -59,6 +61,7 @@ import {
   itemsForUnit,
   visibleItemsForRole,
 } from './utils/inventory';
+import { getAppRouteHash, isValidAppRouteHash, parseAppRoute, updateAppRouteUrl } from './utils/appRouting';
 import { createCsvContent, downloadTextFile } from './utils/exports';
 import type { ExportColumn } from './utils/exports';
 import {
@@ -97,70 +100,6 @@ type DashboardInventoryFilter =
   | { field: 'status'; value: 'active' | 'pending' }
   | { field: 'operationalStatus'; value: OperationalStatus };
 
-type AppRoute = {
-  page: AppPage;
-  filter: InventoryFilters | null;
-  unit: City | null;
-  hasUnit: boolean;
-};
-
-const parseUnitParameter = (params: URLSearchParams) => {
-  const value = params.get('unit');
-  if (value === 'all') return { unit: null, hasUnit: true };
-  if (cityOptions.includes(value as City)) return { unit: value as City, hasUnit: true };
-  return { unit: null, hasUnit: false };
-};
-
-const parseAppRoute = (hash: string): AppRoute => {
-  const [rawPath, rawQuery = ''] = hash.replace(/^#/, '').split('?');
-  const routeName = (rawPath ?? '').replace(/^\/+/, '');
-  const page: AppPage = routeName === 'inventory' || routeName === 'users' || routeName === 'profile' ? routeName : 'dashboard';
-  if (page !== 'inventory') {
-    const params = new URLSearchParams(rawQuery);
-    return { page, filter: null, ...parseUnitParameter(params) };
-  }
-
-  const params = new URLSearchParams(rawQuery);
-  const statuses = Array.from(new Set(params.getAll('status').filter((status): status is ItemStatus => itemStatuses.includes(status as ItemStatus))));
-  const states = Array.from(new Set(params.getAll('state').filter((state): state is ItemState => itemStates.includes(state as ItemState))));
-  const operationalStatusFilters = Array.from(new Set(params.getAll('operationalStatus').filter((status): status is OperationalStatus => operationalStatuses.includes(status as OperationalStatus))));
-  const types = Array.from(new Set(params.getAll('type').filter(Boolean)));
-  const query = params.get('q') ?? '';
-  const unitSelection = parseUnitParameter(params);
-  const filter: InventoryFilters = {
-    ...(query ? { query } : {}),
-    ...(types.length ? { types } : {}),
-    ...(statuses.length ? { statuses } : {}),
-    ...(states.length ? { states } : {}),
-    ...(operationalStatusFilters.length ? { operationalStatuses: operationalStatusFilters } : {}),
-  };
-
-  return { page, filter: Object.keys(filter).length > 0 ? filter : null, ...unitSelection };
-};
-
-const getAppRouteHash = (page: AppPage, filter: InventoryFilters | null = null, unit?: City | null) => {
-  const params = new URLSearchParams();
-  if (unit === null) params.set('unit', 'all');
-  else if (unit) params.set('unit', unit);
-  if (page === 'inventory' && filter?.query) params.set('q', filter.query);
-  if (page === 'inventory') filter?.types?.forEach((type) => params.append('type', type));
-  if (page === 'inventory') filter?.statuses?.forEach((status) => params.append('status', status));
-  if (page === 'inventory') filter?.states?.forEach((state) => params.append('state', state));
-  if (page === 'inventory') filter?.operationalStatuses?.forEach((status) => params.append('operationalStatus', status));
-  const query = params.toString();
-  return `#/${page}${query ? `?${query}` : ''}`;
-};
-
-const updateAppRouteUrl = (page: AppPage, filter: InventoryFilters | null = null, replace = false, unit?: City | null) => {
-  const nextHash = getAppRouteHash(page, filter, unit);
-  if (window.location.hash === nextHash) return;
-  if (replace) {
-    window.history.replaceState(window.history.state, '', nextHash);
-  } else {
-    window.history.pushState(window.history.state, '', nextHash);
-  }
-};
-
 const itemTypeOptions = [
   'viatura',
   'mangueira',
@@ -172,15 +111,6 @@ const itemTypeOptions = [
 ];
 
 const normalizeSearchText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
-const historyActionLabels: Record<InventoryHistoryAction, string> = {
-  created: 'Criado',
-  edited: 'Editado',
-  approved: 'Aprovado',
-  rejected: 'Rejeitado',
-  moved: 'Movimentado',
-  deactivated: 'Desativado',
-};
 
 const createUuid = () => {
   const segment = () => Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, '0');
@@ -270,8 +200,8 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
   };
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#0b1224] text-white">
-      <div className="mx-auto grid min-h-screen max-w-[1500px] lg:grid-cols-[1.08fr_0.92fr]">
+    <main className="application-shell overflow-hidden bg-[#0b1224] text-white">
+      <div className="mx-auto grid min-h-screen max-w-[1500px] flex-1 lg:grid-cols-[1.08fr_0.92fr]">
         <section className="relative hidden overflow-hidden px-12 py-12 lg:flex lg:flex-col lg:justify-between xl:px-20">
           <div className="relative flex items-center gap-3">
             <BrandLogo className="h-12 w-12" />
@@ -373,6 +303,7 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
   );
 }
 
+// Operational documentation: ./App.DashboardPage.operations.md
 function DashboardPage({
   user,
   items,
@@ -478,30 +409,18 @@ function DashboardPage({
             </div>
           </section>
 
-          <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40 sm:p-6">
-            <div className="flex items-start justify-between gap-4">
+          <section className="mt-6">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-lg font-semibold text-slate-950">Movimentações recentes</p>
-                <p className="mt-1 text-sm text-slate-500">Últimas alterações registradas nos itens disponíveis para este perfil.</p>
+                <h2 className="text-lg font-semibold text-foreground">Movimentações recentes</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Últimas alterações registradas nos itens disponíveis para este perfil.</p>
               </div>
               <button type="button" onClick={() => onNavigate('inventory')} className={`text-xs font-bold text-primary ${COLOR_TRANSITION_CLASS} hover:text-primary-strong`}>Controle de patrimônio <span aria-hidden="true">→</span></button>
             </div>
-            <div className="mt-5 divide-y divide-slate-100">
-              {recentMovements.map(({ item, entry }) => (
-                <button key={entry.id} type="button" onClick={() => user.role === 'adm' && item.status === 'pending' ? onEditItem(item) : onOpenHistory(item)} className={`flex w-full flex-wrap items-center gap-3 py-3 text-left first:pt-0 last:pb-0 ${COLOR_TRANSITION_CLASS} hover:bg-slate-50`}>
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--color-hover)] text-xs font-bold text-primary">{getTypeIcon(item.type)}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-slate-800">{item.description}</span>
-                    <span className="mt-1 block truncate text-xs text-slate-500">{entry.summary}</span>
-                  </span>
-                  <span className="shrink-0 text-right">
-                    <span className="block text-xs font-semibold text-slate-600">{historyActionLabels[entry.action]}</span>
-                    <span className="mt-1 block text-[11px] text-slate-400">{formatDateTime(entry.timestamp)}</span>
-                  </span>
-                </button>
-              ))}
-              {recentMovements.length === 0 && <p className="py-5 text-sm text-slate-500">Nenhuma movimentação registrada.</p>}
-            </div>
+            <RecentMovementsTable
+              movements={recentMovements}
+              onActivate={({ item }) => user.role === 'adm' && item.status === 'pending' ? onEditItem(item) : onOpenHistory(item)}
+            />
           </section>
       </>
 
@@ -510,7 +429,7 @@ function DashboardPage({
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
                 <p className="text-lg font-semibold text-slate-950">Itens pendentes de aprovação</p>
-                <p className="mt-1 text-sm text-slate-500">Selecione um item para editar seu cadastro e status administrativo.</p>
+                <p className="mt-1 text-sm text-slate-500">Selecione um item para editar os dados do patrimônio.</p>
               </div>
               <span className="rounded-md bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700">{formatQuantity(pendingItems.length)} pendente(s)</span>
             </div>
@@ -597,9 +516,9 @@ const inventoryDetailColumns: DynamicDataTableColumn<InventoryItem, InventoryCol
   { key: 'type', label: 'Tipo', sortValue: (item) => getTypeLabel(item.type), renderCell: (item) => <span className="text-sm text-slate-600">{getTypeLabel(item.type)}</span> },
   { key: 'cidade', label: 'Cidade/unidade', sortValue: (item) => getCityLabel(item.cidade), renderCell: (item) => <span className="text-sm text-slate-600">{getCityLabel(item.cidade) || '—'}</span> },
   { key: 'state', label: 'Condição', sortValue: (item) => stateLabels[item.state], renderCell: (item) => <StatusBadge kind={BadgeKind.State} value={item.state} size="regular" /> },
-  { key: 'operationalStatus', label: 'Status operacional', sortValue: (item) => operationalStatusLabels[item.operationalStatus], renderCell: (item) => <StatusBadge kind={BadgeKind.OperationalStatus} value={item.operationalStatus} size="regular" /> },
+  { key: 'operationalStatus', label: 'Operação', sortValue: (item) => operationalStatusLabels[item.operationalStatus], renderCell: (item) => <StatusBadge kind={BadgeKind.OperationalStatus} value={item.operationalStatus} size="regular" /> },
   { key: 'valor', label: 'Valor estimado', numeric: true, sortValue: (item) => item.valor, renderCell: (item) => <span className="text-sm text-slate-700">{formatCurrency(item.valor)}</span> },
-  { key: 'status', label: 'Status administrativo', sortValue: (item) => statusLabels[item.status], renderCell: (item) => <StatusBadge kind={BadgeKind.Status} value={item.status} size="regular" /> },
+  { key: 'status', label: 'Cadastro', sortValue: (item) => statusLabels[item.status], renderCell: (item) => <StatusBadge kind={BadgeKind.Status} value={item.status} size="regular" /> },
   { key: 'lastTimeTouched', label: 'Última movimentação', sortValue: (item) => Date.parse(item.lastTimeTouched), renderCell: (item) => <span className="whitespace-nowrap text-sm text-slate-500">{formatDateTime(item.lastTimeTouched)}</span> },
 ];
 
@@ -641,9 +560,11 @@ const inventoryGroupColumns: DynamicDataTableColumn<InventoryGroupRow, Inventory
 function InventoryPage({
   user,
   items,
-  selectedUnit,
+  selectedDescription,
   initialFilter,
   onOpenHistory,
+  onOpenDescription,
+  onBackToInventory,
   onEdit,
   onCreate,
   onApproveItem,
@@ -654,9 +575,11 @@ function InventoryPage({
 }: {
   user: AppUser;
   items: InventoryItem[];
-  selectedUnit: City | null;
+  selectedDescription: string | null;
   initialFilter: InventoryFilters | null;
   onOpenHistory: (item: InventoryItem) => void;
+  onOpenDescription: (description: string) => void;
+  onBackToInventory: (filter: InventoryFilters | null) => void;
   onEdit: (item: InventoryItem) => void;
   onCreate: () => void;
   onApproveItem: (item: InventoryItem) => void;
@@ -665,7 +588,6 @@ function InventoryPage({
   onFilterChange: (filter: InventoryFilters | null) => void;
   onToast: (toast: Toast) => void;
 }) {
-  const [selectedDescription, setSelectedDescription] = useState<string | null>(null);
   const [query, setQuery] = useState(() => initialFilter?.query ?? '');
   const [typeFilters, setTypeFilters] = useState<string[]>(() => initialFilter?.types ?? []);
   const [statusFilters, setStatusFilters] = useState<ItemStatus[]>(() => initialFilter?.statuses ?? []);
@@ -686,10 +608,6 @@ function InventoryPage({
     setStateFilters(initialFilter?.states ?? []);
     setOperationalStatusFilters(initialFilter?.operationalStatuses ?? []);
   }, [initialFilter?.query, initialFilter?.types, initialFilter?.statuses, initialFilter?.states, initialFilter?.operationalStatuses]);
-
-  useEffect(() => {
-    setSelectedDescription(null);
-  }, [selectedUnit]);
 
   const visibleItems = useMemo(() => visibleItemsForRole(items, user.role), [items, user.role]);
   const availableTypes = useMemo(() => Array.from(new Set(visibleItems.map((item) => item.type))).sort(), [visibleItems]);
@@ -826,7 +744,6 @@ function InventoryPage({
       : normalizeInventoryFilters(filters);
     const roleSafeColumns: InventoryColumnKey[] = columns.includes('nrPatrimonio') ? columns : ['nrPatrimonio', ...columns];
     const roleSafeGroupColumns: InventoryGroupColumnKey[] = groupColumns.includes('description') ? groupColumns : ['description', ...groupColumns];
-    setSelectedDescription(null);
     setQuery(roleSafeFilters?.query ?? '');
     setTypeFilters(roleSafeFilters?.types ?? []);
     setStatusFilters(roleSafeFilters?.statuses ?? []);
@@ -836,7 +753,11 @@ function InventoryPage({
     setVisibleGroupColumns(roleSafeGroupColumns);
     setSummaryVisible(false);
     setSuggestionsOpen(false);
-    onFilterChange(roleSafeFilters);
+    if (selectedDescription !== null) {
+      onBackToInventory(roleSafeFilters);
+    } else {
+      onFilterChange(roleSafeFilters);
+    }
   };
 
   return (
@@ -845,7 +766,7 @@ function InventoryPage({
         <div>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">Consulta de ativos</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{selectedDescription ?? (user.role === 'reader' ? 'Consulta de Ativos' : 'Controle de patrimônio')}</h1>
-          {selectedDescription !== null && <Button variant="ghost" onClick={() => setSelectedDescription(null)} className="mt-3">Voltar ao estoque patrimonial</Button>}
+          {selectedDescription !== null && <Button variant="ghost" onClick={() => onBackToInventory(currentFilters)} className="mt-3">Voltar ao estoque patrimonial</Button>}
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">{selectedDescription === null ? 'Consulte os totais por descrição e abra um item para ver seus patrimônios.' : `${detailItems.length} patrimônio(s) visível(is) neste cadastro. Cada número de patrimônio corresponde a uma unidade.`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -903,7 +824,7 @@ function InventoryPage({
             />
             <FilterDropdown
               id="inventory-status-filter"
-              label="Status"
+              label="Cadastro"
               selectedValues={statusFilters}
               options={itemStatuses.filter((status) => user.role !== 'reader' || status === 'active').map((status) => ({ value: status, label: statusLabels[status] }))}
               onChange={(values) => {
@@ -922,7 +843,7 @@ function InventoryPage({
             />
             <FilterDropdown
               id="inventory-operational-status-filter"
-              label="Status operacional"
+              label="Operação"
               selectedValues={operationalStatusFilters}
               options={operationalStatuses.map((status) => ({ value: status, label: operationalStatusLabels[status] }))}
               onChange={(values) => {
@@ -989,13 +910,13 @@ function InventoryPage({
             columnControlTarget={groupColumnControlTarget}
             getRowKey={([description]) => description}
             getRowLabel={([description]) => `Abrir patrimônios de ${description}`}
-            onRowClick={([description]) => { setSelectedDescription(description); setSuggestionsOpen(false); }}
+            onRowClick={([description]) => { onOpenDescription(description); setSuggestionsOpen(false); }}
             getActionMenuLabel={([description]) => `Ações para ${description}`}
             getActions={([description]): TableAction[] => [{
               key: 'open',
               label: 'Abrir patrimônios',
               icon: 'eye',
-              onSelect: () => { setSelectedDescription(description); setSuggestionsOpen(false); },
+              onSelect: () => { onOpenDescription(description); setSuggestionsOpen(false); },
             }]}
           />
         ) : (
@@ -1049,7 +970,7 @@ function HistoryDrawer({
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <button type="button" aria-label="Fechar detalhes" onClick={onClose} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
+      <button type="button" aria-label="Fechar detalhes" onClick={onClose} className="application-backdrop absolute inset-0" />
       <aside className="relative flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-5 sm:px-6">
           <div className="min-w-0 flex-1">
@@ -1081,7 +1002,7 @@ function HistoryDrawer({
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--color-hover)] text-primary"><Icon name="history" className="h-4 w-4" /></div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-900">{historyActionLabels[entry.action]}</p>
+                      <p className="text-sm font-semibold text-slate-900">{inventoryHistoryActionLabels[entry.action]}</p>
                       <time className="text-[11px] text-slate-400">{formatDateTime(entry.timestamp)}</time>
                     </div>
                     <p className="mt-1 text-xs leading-5 text-slate-600">{entry.summary}</p>
@@ -1100,6 +1021,7 @@ function HistoryDrawer({
   );
 }
 
+// Operational documentation: ./App.ItemFormModal.operations.md
 function ItemFormModal({
   items,
   item,
@@ -1184,17 +1106,19 @@ function ItemFormModal({
   };
 
   return (
-    <Dialog labelledBy="item-form-title" closeLabel="Fechar formulário" onClose={onClose} size="lg" panelClassName="flex max-h-[min(850px,calc(100vh-2rem))] flex-col">
-        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-7">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{isEditing ? 'Atualização patrimonial' : 'Novo patrimônio'}</p>
-            <h2 id="item-form-title" className="mt-2 text-xl font-semibold text-slate-950">{isEditing ? 'Editar registro' : 'Cadastrar novo item'}</h2>
-            <p className="mt-1 text-sm text-slate-500">{isEditing && !isAdmin ? 'Seu perfil pode alterar o estado físico, a situação operacional e a cidade/unidade.' : 'Cada cadastro representa uma unidade com número de patrimônio único.'}</p>
-          </div>
-          <IconButton label="Fechar formulário" onClick={onClose}><Icon name="close" className="h-5 w-5" /></IconButton>
-        </div>
-
-        <form id="item-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6 sm:px-7">
+    <Dialog
+      open
+      onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}
+      title={isEditing ? 'Editar registro' : 'Cadastrar novo item'}
+      caption={isEditing && !isAdmin ? 'Seu perfil pode alterar o estado físico, a situação operacional e a cidade/unidade.' : 'Cada cadastro representa uma unidade com número de patrimônio único.'}
+      closeLabel="Fechar formulário"
+      size="lg"
+      actions={[
+        { label: 'Cancelar', variant: 'secondary', onClick: onClose },
+        { label: 'Salvar registro', variant: 'primary', type: 'submit', form: 'item-form' },
+      ]}
+    >
+        <form id="item-form" onSubmit={handleSubmit} className="space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <FieldLabel htmlFor="item-description">Descrição do item</FieldLabel>
@@ -1248,7 +1172,7 @@ function ItemFormModal({
               )}
             </div>
             <div>
-              <FieldLabel htmlFor="item-operational-status">Status operacional</FieldLabel>
+              <FieldLabel htmlFor="item-operational-status">Operação</FieldLabel>
               <SelectInput id="item-operational-status" value={form.operationalStatus} onChange={(event) => updateField('operationalStatus', event.target.value as OperationalStatus)}>
                 {operationalStatuses.map((status) => <option key={status} value={status}>{operationalStatusLabels[status]}</option>)}
               </SelectInput>
@@ -1264,7 +1188,7 @@ function ItemFormModal({
               <TextInput id="item-value" type="number" min="0.01" step="0.01" value={form.valor} onChange={(event) => updateField('valor', Number(event.target.value))} disabled={isEditing && !isAdmin} />
             </div>
             <div>
-              <FieldLabel htmlFor="item-status">Status administrativo</FieldLabel>
+              <FieldLabel htmlFor="item-status">Cadastro</FieldLabel>
               {isAdmin && isEditing ? (
                 <SelectInput id="item-status" value={form.status} onChange={(event) => updateField('status', event.target.value as ItemStatus)}>
                   {itemStatuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
@@ -1278,17 +1202,12 @@ function ItemFormModal({
             </div>
           </div>
 
-          {error && <div role="alert" className="mt-5 rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">{error}</div>}
+          {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">{error}</div>}
 
-          <div className="mt-6 rounded-md bg-slate-50 p-4 text-xs leading-5 text-slate-500">
-            <div className="flex gap-2"><Icon name="info" className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" /><span>{isEditing && !isAdmin ? 'O almoxarife pode atualizar condição operacional e cidade/unidade.' : role === 'almoxarife' ? 'Exemplares de cadastros já aprovados entram como ativos. Cadastros novos aguardam aprovação do gestor.' : 'Itens criados pelo gestor entram automaticamente como ativos.'}</span></div>
+          <div className="rounded-md bg-surface-muted p-4 text-xs leading-5 text-muted-foreground">
+            <div className="flex gap-2"><Icon name="info" className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span>{isEditing && !isAdmin ? 'O almoxarife pode atualizar condição operacional e cidade/unidade.' : role === 'almoxarife' ? 'Exemplares de cadastros já aprovados entram como ativos. Cadastros novos aguardam aprovação do gestor.' : 'Itens criados pelo gestor entram automaticamente como ativos.'}</span></div>
           </div>
         </form>
-
-        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end sm:px-7">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="item-form">Salvar registro</Button>
-        </div>
     </Dialog>
   );
 }
@@ -1307,6 +1226,7 @@ function ToastBanner({ toast, onClose }: { toast: Toast; onClose: () => void }) 
   );
 }
 
+// Operational documentation: ./App.ExportFormatModal.operations.md
 function ExportFormatModal({
   itemCount,
   onClose,
@@ -1317,26 +1237,19 @@ function ExportFormatModal({
   onExport: (format: 'csv' | 'pdf') => void;
 }) {
   return (
-    <Dialog labelledBy="export-format-title" closeLabel="Fechar exportação" onClose={onClose} size="sm" panelClassName="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Exportar almoxarifado</p>
-            <h2 id="export-format-title" className="mt-2 text-xl font-semibold text-slate-950">Escolha o formato</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Serão exportados {formatQuantity(itemCount)} registros permitidos para o seu perfil.</p>
-          </div>
-          <IconButton label="Fechar exportação" onClick={onClose}><Icon name="close" className="h-5 w-5" /></IconButton>
-        </div>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <Button type="button" variant="secondary" onClick={() => onExport('csv')} className="min-h-12">
-            <Icon name="download" className="h-4 w-4" />
-            Exportar CSV
-          </Button>
-          <Button type="button" onClick={() => onExport('pdf')} className="min-h-12">
-            <Icon name="download" className="h-4 w-4" />
-            Exportar PDF
-          </Button>
-        </div>
-        <Button type="button" variant="ghost" onClick={onClose} className="mt-3 w-full">Cancelar</Button>
+    <Dialog
+      open
+      onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}
+      title="Escolha o formato"
+      caption={`Serão exportados ${formatQuantity(itemCount)} registros permitidos para o seu perfil.`}
+      closeLabel="Fechar exportação"
+      size="sm"
+      actions={[
+        { label: 'Exportar CSV', variant: 'secondary', onClick: () => onExport('csv') },
+        { label: 'Exportar PDF', variant: 'primary', onClick: () => onExport('pdf') },
+      ]}
+    >
+      <p className="text-sm text-muted-foreground">Selecione um formato para gerar o arquivo.</p>
     </Dialog>
   );
 }
@@ -1345,9 +1258,10 @@ function App() {
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const [session, setSession] = useState<AppUser | null>(null);
   const [users, setUsers] = useState<AppUser[]>(demoUsers);
-  const [initialRoute] = useState<AppRoute>(() => parseAppRoute(window.location.hash));
+  const [initialRoute] = useState(() => parseAppRoute(window.location.hash));
   const [page, setPage] = useState<AppPage>(() => initialRoute.page);
   const [inventoryFilter, setInventoryFilter] = useState<InventoryFilters | null>(() => initialRoute.filter);
+  const [selectedDescription, setSelectedDescription] = useState<string | null>(() => initialRoute.description);
   const [selectedUnit, setSelectedUnit] = useState<City | null>(() => initialRoute.unit);
   const [items, setItems] = useState<InventoryItem[]>(inventorySeed);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<InventoryItem | null>(null);
@@ -1370,21 +1284,32 @@ function App() {
         updateAppRouteUrl(fallbackPage, null, true, nextUnit);
         nextRoute = { ...nextRoute, page: fallbackPage, filter: null };
       }
-      if (session?.role === 'reader' && nextRoute.page !== 'profile') {
-        const readerFilter = normalizeInventoryFilters({
-          ...(nextRoute.filter ?? {}),
-          statuses: nextRoute.filter?.statuses?.filter((status) => status === 'active'),
-        });
-        if (nextRoute.page !== 'inventory' || getAppRouteHash('inventory', readerFilter, nextUnit) !== window.location.hash) {
-          updateAppRouteUrl('inventory', readerFilter, true, nextUnit);
+      if (session?.role === 'reader') {
+        const targetPage: AppPage = nextRoute.page === 'dashboard' || nextRoute.page === 'users'
+          ? 'inventory'
+          : nextRoute.page;
+        if (targetPage === 'inventory' || targetPage === 'details') {
+          const readerFilter = normalizeInventoryFilters({
+            ...(nextRoute.filter ?? {}),
+            statuses: nextRoute.filter?.statuses?.filter((status) => status === 'active'),
+          });
+          const targetDescription = targetPage === 'details' ? nextRoute.description : null;
+          if (getAppRouteHash(targetPage, readerFilter, nextUnit, targetDescription) !== window.location.hash) {
+            updateAppRouteUrl(targetPage, readerFilter, true, nextUnit, targetDescription);
+          }
+          nextRoute = { ...nextRoute, page: targetPage, filter: readerFilter, description: targetDescription };
         }
-        nextRoute = { ...nextRoute, page: 'inventory', filter: readerFilter };
+      }
+      if (!isValidAppRouteHash(window.location.hash)) {
+        const routeUnit = nextRoute.hasUnit ? nextRoute.unit : session?.unidade || undefined;
+        updateAppRouteUrl(nextRoute.page, nextRoute.filter, true, routeUnit, nextRoute.description);
       }
       if (session?.unidade && !nextRoute.hasUnit) {
-        updateAppRouteUrl(nextRoute.page, nextRoute.filter, true, session.unidade);
+        updateAppRouteUrl(nextRoute.page, nextRoute.filter, true, session.unidade, nextRoute.description);
       }
       setPage(nextRoute.page);
       setInventoryFilter(nextRoute.filter);
+      setSelectedDescription(nextRoute.description);
       setSelectedUnit(nextUnit);
       setSelectedHistoryItem(null);
       setSelectedUser(null);
@@ -1411,17 +1336,19 @@ function App() {
     const landingPage: AppPage = requestedRoute.page === 'profile'
       ? 'profile'
       : user.role === 'reader'
-        ? 'inventory'
+        ? requestedRoute.page === 'details' ? 'details' : 'inventory'
         : canOpenRequestedPage ? requestedRoute.page : 'dashboard';
     const requestedFilter = user.role === 'reader'
       ? normalizeInventoryFilters({ ...(requestedRoute.filter ?? {}), statuses: requestedRoute.filter?.statuses?.filter((status) => status === 'active') })
       : requestedRoute.filter;
-    const landingFilter = landingPage === 'inventory' ? requestedFilter : null;
+    const landingFilter = landingPage === 'inventory' || landingPage === 'details' ? requestedFilter : null;
+    const landingDescription = landingPage === 'details' ? requestedRoute.description : null;
     setSession(user);
     setSelectedUnit(nextUnit);
     setPage(landingPage);
     setInventoryFilter(landingFilter);
-    updateAppRouteUrl(landingPage, landingFilter, true, nextUnit);
+    setSelectedDescription(landingDescription);
+    updateAppRouteUrl(landingPage, landingFilter, true, nextUnit, landingDescription);
     setSelectedHistoryItem(null);
     setSelectedUser(null);
     setModal(null);
@@ -1432,6 +1359,7 @@ function App() {
     setSession(null);
     setSelectedUnit(null);
     setInventoryFilter(null);
+    setSelectedDescription(null);
     window.history.replaceState(window.history.state, '', '#/login');
     setSelectedHistoryItem(null);
     setSelectedUser(null);
@@ -1441,30 +1369,43 @@ function App() {
   };
 
   const handleNavigate = (nextPage: AppPage) => {
+    if (nextPage === 'details' && selectedDescription === null) {
+      return;
+    }
+
     if (nextPage === 'users' && session?.role !== 'adm') {
       return;
     }
 
-    if (session?.role === 'reader' && nextPage !== 'profile') {
+    if (session?.role === 'reader' && nextPage !== 'profile' && nextPage !== 'details') {
+      const nextFilter = nextPage === 'inventory' && page === 'details' ? inventoryFilter : null;
       setPage('inventory');
-      setInventoryFilter(null);
-      updateAppRouteUrl('inventory', null, true, selectedUnit);
+      setInventoryFilter(nextFilter);
+      setSelectedDescription(null);
+      updateAppRouteUrl('inventory', nextFilter, false, selectedUnit);
       return;
     }
 
-    setInventoryFilter(null);
+    const nextFilter = nextPage === 'inventory' && page === 'details' ? inventoryFilter : null;
+    const nextDescription = nextPage === 'details' ? selectedDescription : null;
+    setInventoryFilter(nextFilter);
+    setSelectedDescription(nextDescription);
     setPage(nextPage);
     setSelectedUser(null);
-    updateAppRouteUrl(nextPage, null, false, selectedUnit);
+    updateAppRouteUrl(nextPage, nextFilter, false, selectedUnit, nextDescription);
   };
 
   const handleSelectUnit = (unit: City | null) => {
-    const nextPage: AppPage = session?.role === 'reader' && page !== 'profile' ? 'inventory' : page;
+    const nextPage: AppPage = session?.role === 'reader' && page !== 'profile' && page !== 'details' ? 'inventory' : page;
+    if (nextPage !== page) {
+      setPage(nextPage);
+      setSelectedDescription(null);
+    }
     setSelectedUnit(unit);
     setSelectedHistoryItem(null);
     setModal(null);
     setExportScope(null);
-    updateAppRouteUrl(nextPage, nextPage === 'inventory' ? inventoryFilter : null, false, unit);
+    updateAppRouteUrl(nextPage, nextPage === 'inventory' || nextPage === 'details' ? inventoryFilter : null, false, unit, nextPage === 'details' ? selectedDescription : null);
   };
 
   const handleUpdateUserRole = (userId: string, role: UserRole) => {
@@ -1487,6 +1428,7 @@ function App() {
       setSession(updatedUser);
       setPage(landingPage);
       setInventoryFilter(null);
+      setSelectedDescription(null);
       updateAppRouteUrl(landingPage, null, true, selectedUnit);
     }
   };
@@ -1505,7 +1447,7 @@ function App() {
     setSession(updatedUser);
     const nextUnit = profile.unidade !== session.unidade ? updatedUser.unidade || null : selectedUnit;
     setSelectedUnit(nextUnit);
-    updateAppRouteUrl(page, page === 'inventory' ? inventoryFilter : null, true, nextUnit);
+    updateAppRouteUrl(page, page === 'inventory' || page === 'details' ? inventoryFilter : null, true, nextUnit, page === 'details' ? selectedDescription : null);
     setToast({ message: 'Perfil atualizado.', tone: 'success', detail: 'Seus dados foram atualizados nesta sessão do protótipo.' });
   };
 
@@ -1514,14 +1456,30 @@ function App() {
       ? { statuses: [filter.value] }
       : { operationalStatuses: [filter.value] };
     setInventoryFilter(nextFilter);
+    setSelectedDescription(null);
     setPage('inventory');
     updateAppRouteUrl('inventory', nextFilter, false, selectedUnit);
+  };
+
+  const handleOpenDescription = (description: string) => {
+    setSelectedDescription(description);
+    setSelectedHistoryItem(null);
+    setPage('details');
+    updateAppRouteUrl('details', inventoryFilter, false, selectedUnit, description);
+  };
+
+  const handleBackToInventory = (filter: InventoryFilters | null = inventoryFilter) => {
+    setSelectedDescription(null);
+    setPage('inventory');
+    setInventoryFilter(filter);
+    updateAppRouteUrl('inventory', filter, true, selectedUnit);
   };
 
   const handleInventoryFilterChange = (filter: InventoryFilters | null) => {
     const nextFilter = normalizeInventoryFilters(filter);
     setInventoryFilter(nextFilter);
-    updateAppRouteUrl('inventory', nextFilter, true, selectedUnit);
+    const routePage = page === 'details' && selectedDescription !== null ? 'details' : 'inventory';
+    updateAppRouteUrl(routePage, nextFilter, true, selectedUnit, routePage === 'details' ? selectedDescription : null);
   };
 
   const handleSaveItem = (values: InventoryFormValues) => {
@@ -1537,18 +1495,22 @@ function App() {
 
           const nextStatus = session.role === 'adm' ? values.status : currentItem.status;
           const cityChanged = currentItem.cidade !== values.cidade;
+          const stateChanged = currentItem.state !== values.state;
+          const operationalStatusChanged = currentItem.operationalStatus !== values.operationalStatus;
           const statusChanged = currentItem.status !== nextStatus;
-          const summary = cityChanged
-            ? `Cidade/unidade alterada de ${getCityLabel(currentItem.cidade)} para ${getCityLabel(values.cidade)}.`
-            : statusChanged
-              ? `Status administrativo alterado de ${statusLabels[currentItem.status]} para ${statusLabels[nextStatus]}.`
-              : 'Dados do patrimônio atualizados.';
+          const changeSummaries = [
+            cityChanged ? `Cidade/unidade alterada de ${getCityLabel(currentItem.cidade)} para ${getCityLabel(values.cidade)}.` : null,
+            stateChanged ? `Condição alterada de ${stateLabels[currentItem.state]} para ${stateLabels[values.state]}.` : null,
+            operationalStatusChanged ? `Operação alterada de ${operationalStatusLabels[currentItem.operationalStatus]} para ${operationalStatusLabels[values.operationalStatus]}.` : null,
+            statusChanged ? `Cadastro alterado de ${statusLabels[currentItem.status]} para ${statusLabels[nextStatus]}.` : null,
+          ].filter((summary): summary is string => summary !== null);
+          const summary = changeSummaries.length > 0 ? changeSummaries.join(' ') : 'Dados do patrimônio atualizados.';
           const historyAction: InventoryHistoryAction = statusChanged
             ? nextStatus === 'rejected'
               ? 'rejected'
               : nextStatus === 'deactivated'
                 ? 'deactivated'
-                : 'edited'
+                : 'administrativeStatusChanged'
             : cityChanged ? 'moved' : 'edited';
           const historyEntry = createHistoryEntry(session, historyAction, summary, {
             previousStatus: currentItem.status,
@@ -1659,7 +1621,7 @@ function App() {
     return <LoginScreen users={users} onLogin={handleLogin} />;
   }
 
-  const currentPage: AppPage = session.role === 'reader' && page !== 'profile'
+  const currentPage: AppPage = session.role === 'reader' && page !== 'profile' && page !== 'details'
     ? 'inventory'
     : session.role !== 'adm' && page === 'users' ? 'dashboard' : page;
 
@@ -1668,8 +1630,8 @@ function App() {
       <InventoryShell user={session} page={currentPage} selectedUnit={selectedUnit} onSelectUnit={handleSelectUnit} onNavigate={handleNavigate} onLogout={handleLogout} onExportAll={() => setExportScope('all')} theme={theme} onToggleTheme={toggleTheme}>
         {currentPage === 'dashboard' ? (
           <DashboardPage user={session} items={unitScopedItems} onNavigate={handleNavigate} onFilterInventory={handleFilterInventory} onOpenHistory={setSelectedHistoryItem} onEditItem={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} />
-        ) : currentPage === 'inventory' ? (
-          <InventoryPage user={session} items={unitScopedItems} selectedUnit={selectedUnit} initialFilter={inventoryFilter} onOpenHistory={setSelectedHistoryItem} onApproveItem={(item) => handleReviewStatus(item, 'active')} onRejectItem={(item) => handleReviewStatus(item, 'rejected')} onEdit={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} onExportCurrent={handleExportCurrent} onFilterChange={handleInventoryFilterChange} onToast={(nextToast) => setToast(nextToast)} />
+        ) : currentPage === 'inventory' || currentPage === 'details' ? (
+          <InventoryPage user={session} items={unitScopedItems} selectedDescription={currentPage === 'details' ? selectedDescription : null} initialFilter={inventoryFilter} onOpenHistory={setSelectedHistoryItem} onOpenDescription={handleOpenDescription} onBackToInventory={handleBackToInventory} onApproveItem={(item) => handleReviewStatus(item, 'active')} onRejectItem={(item) => handleReviewStatus(item, 'rejected')} onEdit={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} onExportCurrent={handleExportCurrent} onFilterChange={handleInventoryFilterChange} onToast={(nextToast) => setToast(nextToast)} />
         ) : currentPage === 'users' ? (
           <UserManagementPage users={selectedUnit ? users.filter((user) => user.unidade === selectedUnit) : users} onSelectUser={setSelectedUser} />
         ) : (

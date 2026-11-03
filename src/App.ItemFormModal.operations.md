@@ -1,0 +1,41 @@
+# Operational document: `ItemFormModal`
+
+Implementation: [`App.tsx`](./App.tsx) (`ItemFormModal`)
+
+## Purpose and boundary
+
+Collect values for creating or editing one inventory item. The component owns local field state and form validation. The parent owns whether the modal is mounted, the user/session rules, and the resulting inventory mutation/history event.
+
+## Contract and consumer
+
+- The parent supplies the available items, optional item being edited, current role, default city/unit, `onClose`, and `onSubmit` callback.
+- The dialog opens when the parent renders this component. Any shell dismissal calls `onClose`.
+- `onSubmit` receives the validated `InventoryFormValues`. The modal does not persist data.
+
+## Dialog structure
+
+- The shared [`Dialog`](./components/Dialog.operations.md) supplies the visible title (**Cadastrar novo item** or **Editar registro**), the optional role-specific caption, close button, scrolling content region, and action footer.
+- The footer has **Cancelar** (`secondary`) and **Salvar registro** (`primary`). The save action submits the `item-form` element even though the action button lives outside the form markup.
+- Saving does not close the dialog from inside the shell; the parent closes it after processing the submitted values.
+
+## Behavior and validation
+
+- Description, asset number, city/unit, and a positive estimated value are required by the current prototype form.
+- A city/unit must be selected from the available suggestions.
+- A non-administrator editing an item can change condition, operational status, and city/unit. Administrative status and administrative fields remain owned by the existing role logic.
+- Form errors are announced with `role="alert"`. Current values remain visible when validation fails.
+
+## Data and side effects
+
+Uses `InventoryFormValues`, status/condition/type labels, city options, and the parent's submit callback. On submit it trims description and asset number and forwards the resulting values. Persistent storage and server validation are not implemented by this modal.
+
+## Decisions and rationale
+
+- Keep form state and validation inside the form component while standardizing the dialog shell and footer actions through `Dialog`.
+- Use the native form submit path for the footer's save action so Enter key submission and button submission use the same validation handler.
+
+## Verification
+
+- Check create and edit titles/captions, role-specific fields, required-field errors, invalid city selection, positive-value validation, Enter submission, cancel, and close button.
+- Check the form body scrolls while the dialog header and action footer remain visible.
+- Follow repository quality gates for automated checks; report checks that were not run.

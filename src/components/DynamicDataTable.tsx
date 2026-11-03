@@ -39,17 +39,19 @@ type DynamicDataTableProps<T, Key extends string = string> = {
   ariaLabel: string;
   rows: readonly T[];
   columns: readonly DynamicDataTableColumn<T, Key>[];
-  visibleColumnKeys: Key[];
-  defaultColumnKeys: Key[];
-  onVisibleColumnKeysChange: (keys: Key[]) => void;
+  visibleColumnKeys?: Key[];
+  defaultColumnKeys?: Key[];
+  onVisibleColumnKeysChange?: (keys: Key[]) => void;
   getRowKey: (row: T) => string;
-  getActions: (row: T) => TableAction[];
+  getActions?: (row: T) => TableAction[];
   onRowClick?: (row: T) => void;
   getRowLabel?: (row: T) => string;
   getActionMenuLabel?: (row: T) => string;
   actionLabel?: string;
   actionAlign?: TableTextAlignment;
-  /** undefined renders the column control before the table; null waits for an external target. */
+  pagination?: boolean;
+  emptyState?: ReactNode;
+  /** Placement for the optional column picker; null waits for an external target. */
   columnControlTarget?: HTMLDivElement | null;
 };
 
@@ -67,6 +69,8 @@ export function DynamicDataTable<T, Key extends string = string>({
   getActionMenuLabel = () => 'Ações',
   actionLabel = 'Ações',
   actionAlign = 'center',
+  pagination = true,
+  emptyState,
   columnControlTarget,
 }: DynamicDataTableProps<T, Key>) {
   const [sort, setSort] = useState<SortState<Key>>(null);
@@ -77,11 +81,13 @@ export function DynamicDataTable<T, Key extends string = string>({
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const columnsByKey = useMemo(() => new Map(columns.map((column) => [column.key, column])), [columns]);
+  const allColumnKeys = useMemo(() => columns.map((column) => column.key), [columns]);
+  const requestedVisibleKeys = visibleColumnKeys ?? allColumnKeys;
   const normalizedVisibleKeys = useMemo(() => {
-    const selected = Array.from(new Set(visibleColumnKeys.filter((key) => columnsByKey.has(key))));
+    const selected = Array.from(new Set(requestedVisibleKeys.filter((key) => columnsByKey.has(key))));
     const lockedKeys = columns.filter((column) => column.locked).map((column) => column.key);
     return [...lockedKeys.filter((key) => !selected.includes(key)), ...selected];
-  }, [columns, columnsByKey, visibleColumnKeys]);
+  }, [columns, columnsByKey, requestedVisibleKeys]);
   const visibleColumns = normalizedVisibleKeys
     .map((key) => columnsByKey.get(key))
     .filter((column): column is DynamicDataTableColumn<T, Key> => Boolean(column));
@@ -89,11 +95,14 @@ export function DynamicDataTable<T, Key extends string = string>({
     ...normalizedVisibleKeys.map((key) => columnsByKey.get(key)).filter((column): column is DynamicDataTableColumn<T, Key> => Boolean(column)),
     ...columns.filter((column) => !normalizedVisibleKeys.includes(column.key)),
   ];
+  const canConfigureColumns = Boolean(visibleColumnKeys && defaultColumnKeys && onVisibleColumnKeysChange);
+  const hasActions = getActions !== undefined;
+  const hasSortableColumns = visibleColumns.some((column) => column.sortValue !== undefined);
   const sortedColumn = sort ? visibleColumns.find((column) => column.key === sort.key && column.sortValue) : undefined;
   const sortedRows = useMemo(() => {
     if (!sort) return rows;
     const column = columns.find((candidate) => candidate.key === sort.key && candidate.sortValue);
-    if (!column?.sortValue || !visibleColumnKeys.includes(sort.key)) return rows;
+    if (!column?.sortValue || !normalizedVisibleKeys.includes(sort.key)) return rows;
 
     const direction = sort.direction === 'asc' ? 1 : -1;
     return rows.map((row, index) => ({ row, index, value: column.sortValue?.(row) }))
@@ -108,10 +117,12 @@ export function DynamicDataTable<T, Key extends string = string>({
         return comparison === 0 ? first.index - second.index : comparison * direction;
       })
       .map(({ row }) => row);
-  }, [columns, rows, sort, visibleColumnKeys]);
+  }, [columns, normalizedVisibleKeys, rows, sort]);
   const pageCount = Math.max(1, Math.ceil(sortedRows.length / pageSize));
   const activePage = Math.max(1, Math.min(currentPage, pageCount));
-  const pageRows = sortedRows.slice((activePage - 1) * pageSize, activePage * pageSize);
+  const pageRows = pagination
+    ? sortedRows.slice((activePage - 1) * pageSize, activePage * pageSize)
+    : sortedRows;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -137,13 +148,14 @@ export function DynamicDataTable<T, Key extends string = string>({
   }, [columnMenuOpen]);
 
   const toggleColumn = (column: DynamicDataTableColumn<T, Key>) => {
-    if (column.locked) return;
+    if (column.locked || !onVisibleColumnKeysChange) return;
     onVisibleColumnKeysChange(normalizedVisibleKeys.includes(column.key)
       ? normalizedVisibleKeys.filter((key) => key !== column.key)
       : [...normalizedVisibleKeys, column.key]);
   };
 
   const moveColumn = (key: Key, delta: number) => {
+    if (!onVisibleColumnKeysChange) return;
     const index = normalizedVisibleKeys.indexOf(key);
     const target = index + delta;
     if (index < 0 || target < 0 || target >= normalizedVisibleKeys.length) return;
@@ -161,6 +173,7 @@ export function DynamicDataTable<T, Key extends string = string>({
   };
 
   const resetColumns = () => {
+    if (!defaultColumnKeys || !onVisibleColumnKeysChange) return;
     const defaults = defaultColumnKeys.filter((key) => columnsByKey.has(key));
     const lockedKeys = columns.filter((column) => column.locked).map((column) => column.key);
     onVisibleColumnKeysChange([...lockedKeys.filter((key) => !defaults.includes(key)), ...defaults]);
@@ -218,11 +231,13 @@ export function DynamicDataTable<T, Key extends string = string>({
       )}
     </div>
   );
-  const columnControlNode = columnControlTarget === undefined
-    ? columnControl
-    : columnControlTarget === null
-      ? null
-      : createPortal(columnControl, columnControlTarget);
+  const columnControlNode = !canConfigureColumns
+    ? null
+    : columnControlTarget === undefined
+      ? columnControl
+      : columnControlTarget === null
+        ? null
+        : createPortal(columnControl, columnControlTarget);
 
   const isRowControl = (target: EventTarget | null) =>
     target instanceof Element && Boolean(target.closest('[data-row-control], button, a, input, select, textarea, [role="button"], [role="link"]'));
@@ -236,34 +251,36 @@ export function DynamicDataTable<T, Key extends string = string>({
 
   return (
     <section className="min-w-0" aria-label={ariaLabel}>
-      {columnControlTarget === undefined && columnControlNode}
+      {columnControlNode}
 
-      <div className="mb-2 flex flex-wrap items-center gap-2 xl:hidden">
-        <label htmlFor={mobileSortId} className="text-xs font-semibold text-muted-foreground">Ordenar por</label>
-        <select
-          id={mobileSortId}
-          value={sortedColumn ? sort?.key ?? '' : ''}
-          onChange={(event) => setSort(event.target.value ? { key: event.target.value as Key, direction: 'asc' } : null)}
-          className="h-9 min-w-0 flex-1 rounded-md border border-line bg-card px-2 text-sm text-foreground"
-        >
-          <option value="">Ordem original</option>
-          {visibleColumns.filter((column) => column.sortValue).map((column) => <option key={column.key} value={column.key}>{column.label}</option>)}
-        </select>
-        <button
-          type="button"
-          aria-label={`Inverter ordem. Atual: ${sortedColumn && sort?.direction === 'desc' ? 'decrescente' : 'crescente'}`}
-          disabled={!sortedColumn}
-          onClick={() => setSort((current) => current ? { ...current, direction: current.direction === 'asc' ? 'desc' : 'asc' } : current)}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-line bg-card px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Icon name={sort?.direction === 'desc' ? 'arrow-down' : 'arrow-up'} className="h-4 w-4" />
-          {sortedColumn && sort?.direction === 'desc' ? 'Decrescente' : 'Crescente'}
-        </button>
-      </div>
+      {hasSortableColumns && (
+        <div className="mb-2 flex flex-wrap items-center gap-2 xl:hidden">
+          <label htmlFor={mobileSortId} className="text-xs font-semibold text-muted-foreground">Ordenar por</label>
+          <select
+            id={mobileSortId}
+            value={sortedColumn ? sort?.key ?? '' : ''}
+            onChange={(event) => setSort(event.target.value ? { key: event.target.value as Key, direction: 'asc' } : null)}
+            className="h-9 min-w-0 flex-1 rounded-md border border-line bg-card px-2 text-sm text-foreground"
+          >
+            <option value="">Ordem original</option>
+            {visibleColumns.filter((column) => column.sortValue).map((column) => <option key={column.key} value={column.key}>{column.label}</option>)}
+          </select>
+          <button
+            type="button"
+            aria-label={`Inverter ordem. Atual: ${sortedColumn && sort?.direction === 'desc' ? 'decrescente' : 'crescente'}`}
+            disabled={!sortedColumn}
+            onClick={() => setSort((current) => current ? { ...current, direction: current.direction === 'asc' ? 'desc' : 'asc' } : current)}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-line bg-card px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Icon name={sort?.direction === 'desc' ? 'arrow-down' : 'arrow-up'} className="h-4 w-4" />
+            {sortedColumn && sort?.direction === 'desc' ? 'Decrescente' : 'Crescente'}
+          </button>
+        </div>
+      )}
 
-      <div className="overflow-x-auto rounded-md border border-line bg-card">
-        <table role="table" aria-label={ariaLabel} className="responsive-card-table min-w-max w-full text-center text-body text-foreground">
-          <thead className="sr-only bg-muted/50 text-label font-medium text-foreground xl:not-sr-only">
+      <div className="max-w-full overflow-x-auto rounded-md border border-line bg-card">
+        <table role="table" aria-label={ariaLabel} className="data-table w-max min-w-full text-center text-body text-foreground">
+          <thead className="bg-muted/50 text-label font-medium text-foreground">
             <tr role="row">
               {visibleColumns.map((column) => {
                 const direction = sort?.key === column.key ? sort.direction : null;
@@ -278,10 +295,12 @@ export function DynamicDataTable<T, Key extends string = string>({
                   </th>
                 );
               })}
-              <th role="columnheader" scope="col" data-align={actionAlign} aria-sort="none" className={`sticky right-0 z-10 border-b border-line bg-muted/50 px-4 py-3 font-medium sm:px-6 ${textAlignmentClasses[actionAlign]}`}>{actionLabel}</th>
+              {hasActions && (
+                <th role="columnheader" scope="col" data-align={actionAlign} aria-sort="none" className={`xl:sticky xl:right-0 z-10 border-b border-line bg-muted/50 px-4 py-3 font-medium sm:px-6 ${textAlignmentClasses[actionAlign]}`}>{actionLabel}</th>
+              )}
             </tr>
           </thead>
-          <tbody className="xl:divide-y xl:divide-line">
+          <tbody className="divide-y divide-line">
             {pageRows.map((row) => (
               <tr
                 key={getRowKey(row)}
@@ -295,30 +314,41 @@ export function DynamicDataTable<T, Key extends string = string>({
                 className={`group ${COLOR_TRANSITION_CLASS} even:bg-muted/60 hover:bg-muted ${onRowClick ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary' : ''}`}
               >
                 {visibleColumns.map((column) => (
-                  <td key={column.key} role="cell" data-label={column.label} data-align={column.align ?? 'center'} className="border-b border-line px-4 py-4 first:pl-5 sm:first:pl-6 xl:border-b-0">
+                  <td key={column.key} role="cell" data-label={column.label} data-align={column.align ?? 'center'} className="px-4 py-4 first:pl-5 sm:first:pl-6">
                     <div data-cell-content data-align={column.align ?? 'center'} className={`flex w-full min-w-0 items-center ${contentJustificationClasses[column.align ?? 'center']} ${textAlignmentClasses[column.align ?? 'center']} ${column.numeric ? 'tabular-nums' : ''}`}>
                       {column.renderCell(row)}
                     </div>
                   </td>
                 ))}
-                <td role="cell" data-label={actionLabel} data-align={actionAlign} data-row-actions data-row-control className="sticky right-0 z-[1] border-b border-line bg-card px-4 py-4 transition-colors duration-150 group-hover:bg-muted sm:px-6 xl:border-b-0">
-                  <div data-cell-content data-align={actionAlign} className={`flex w-full min-w-0 items-center ${contentJustificationClasses[actionAlign]} ${textAlignmentClasses[actionAlign]}`}>
-                    <TableActionMenu label={getActionMenuLabel(row)} actions={getActions(row)} />
-                  </div>
-                </td>
+                {hasActions && (
+                  <td role="cell" data-label={actionLabel} data-align={actionAlign} data-row-actions data-row-control className="xl:sticky xl:right-0 z-[1] bg-card px-4 py-4 transition-colors duration-150 group-hover:bg-muted sm:px-6">
+                    <div data-cell-content data-align={actionAlign} className={`flex w-full min-w-0 items-center ${contentJustificationClasses[actionAlign]} ${textAlignmentClasses[actionAlign]}`}>
+                      <TableActionMenu label={getActionMenuLabel(row)} actions={getActions?.(row) ?? []} />
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
+            {pageRows.length === 0 && emptyState && (
+              <tr role="row">
+                <td role="cell" colSpan={visibleColumns.length + Number(hasActions)} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  {emptyState}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-      <ListPaginationFooter
-        ariaLabel={ariaLabel}
-        page={activePage}
-        pageSize={pageSize}
-        totalItems={sortedRows.length}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(nextPageSize) => { setPageSize(nextPageSize); setCurrentPage(1); }}
-      />
+      {pagination && (
+        <ListPaginationFooter
+          ariaLabel={ariaLabel}
+          page={activePage}
+          pageSize={pageSize}
+          totalItems={sortedRows.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(nextPageSize) => { setPageSize(nextPageSize); setCurrentPage(1); }}
+        />
+      )}
       {sortedColumn && <span className="sr-only" aria-live="polite">Ordenado por {sortedColumn.label}, {sort?.direction === 'asc' ? 'crescente' : 'decrescente'}.</span>}
     </section>
   );
