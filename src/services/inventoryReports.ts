@@ -1,7 +1,7 @@
 import type { ExportColumn } from '../utils/exports';
 import { operationalStatusLabels, stateLabels, statusLabels } from '../types/inventory';
 import type { InventoryColumnKey, InventoryItem } from '../types/inventory';
-import { formatCurrency, formatDateTime, getTypeLabel } from '../utils/inventory';
+import { formatCurrency, formatDateTime, getCityLabel, getTypeLabel } from '../utils/inventory';
 
 export type { InventoryColumnKey } from '../types/inventory';
 
@@ -43,7 +43,7 @@ export const getInventoryReportColumns = (columnKeys: InventoryColumnKey[]): Exp
         case 'type':
           return getTypeLabel(item.type);
         case 'cidade':
-          return item.cidade;
+          return getCityLabel(item.cidade);
         case 'state':
           return stateLabels[item.state];
         case 'operationalStatus':

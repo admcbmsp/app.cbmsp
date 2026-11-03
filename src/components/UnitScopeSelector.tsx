@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { City } from '../types/inventory';
 import { COLOR_TRANSITION_CLASS } from '../theme/motion';
+import { getCityLabel } from '../utils/inventory';
 import { Icon } from './Icon';
 
 type UnitScopeSelectorProps = {
@@ -15,7 +16,7 @@ export function UnitScopeSelector({ options, selectedUnit, onChange, onSelect }:
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuId = 'unit-scope-options';
-  const selectedLabel = selectedUnit ?? 'Todas as unidades';
+  const selectedLabel = selectedUnit ? getCityLabel(selectedUnit) : 'Todas as unidades';
 
   useEffect(() => {
     if (!isOpen) return;
@@ -83,7 +84,7 @@ export function UnitScopeSelector({ options, selectedUnit, onChange, onSelect }:
               onClick={() => selectUnit(unit)}
               className={`flex min-h-10 w-full items-center justify-between gap-2 rounded-sm px-3 py-2 text-left text-sm ${COLOR_TRANSITION_CLASS} ${selectedUnit === unit ? 'bg-[var(--color-hover)] font-semibold text-primary' : 'text-slate-700 hover:bg-slate-50'}`}
             >
-              <span className="truncate">{unit}</span>
+              <span className="truncate">{getCityLabel(unit)}</span>
               {selectedUnit === unit && <Icon name="check" className="h-4 w-4 shrink-0" />}
             </button>
           ))}

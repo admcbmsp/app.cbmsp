@@ -70,6 +70,23 @@ code {
     overflow-wrap: anywhere;
   }
 
+  .responsive-card-table tbody tr > td > [data-cell-content] {
+    flex: 1 1 55%;
+    min-width: 0;
+  }
+
+  .responsive-card-table tbody tr > td > [data-cell-content][data-align='start'] {
+    text-align: start;
+  }
+
+  .responsive-card-table tbody tr > td > [data-cell-content][data-align='center'] {
+    text-align: center;
+  }
+
+  .responsive-card-table tbody tr > td > [data-cell-content][data-align='end'] {
+    text-align: end;
+  }
+
   .responsive-card-table tbody tr > td::before {
     content: attr(data-label);
     flex: 0 1 45%;
@@ -99,5 +116,12 @@ code {
 
   .responsive-card-table tbody tr {
     align-content: start;
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-card-table thead tr > th + th,
+  .responsive-card-table tbody tr > td + td {
+    border-left: 1px solid var(--color-border);
   }
 }

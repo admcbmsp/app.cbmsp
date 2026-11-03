@@ -1,5 +1,13 @@
 import type { InventoryColumnKey, ItemState, ItemStatus, OperationalStatus } from './inventory';
 
+export type InventoryGroupColumnKey = 'description' | 'total' | `operational:${OperationalStatus}` | `status:${ItemStatus}`;
+
+export const defaultInventoryGroupColumns: InventoryGroupColumnKey[] = [
+  'description',
+  'total',
+  'operational:operacional',
+];
+
 export type InventoryFilters = {
   query?: string;
   types?: string[];
@@ -11,11 +19,12 @@ export type InventoryFilters = {
 export type SavedInventoryView = {
   id: string;
   name: string;
-  version: 1;
+  version: 2;
   filters: InventoryFilters | null;
   columns: InventoryColumnKey[];
+  groupColumns: InventoryGroupColumnKey[];
   createdAt: string;
   updatedAt: string;
 };
 
-export type SavedInventoryViewDraft = Pick<SavedInventoryView, 'name' | 'filters' | 'columns'>;
+export type SavedInventoryViewDraft = Pick<SavedInventoryView, 'name' | 'filters' | 'columns' | 'groupColumns'>;

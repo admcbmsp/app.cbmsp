@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import { COLOR_TRANSITION_CLASS } from '../theme/motion';
 import type { InventoryColumnKey } from '../types/inventory';
-import type { InventoryFilters, SavedInventoryView } from '../types/inventoryViews';
+import type { InventoryFilters, InventoryGroupColumnKey, SavedInventoryView } from '../types/inventoryViews';
 import {
   browserKeyValueStorage,
   createSavedInventoryViewRepository,
@@ -19,13 +19,15 @@ type InventoryViewTemplatesProps = {
   autoApplyDefaultOnEntry: boolean;
   filters: InventoryFilters | null;
   columns: InventoryColumnKey[];
-  onApply: (filters: InventoryFilters | null, columns: InventoryColumnKey[]) => void;
+  groupColumns: InventoryGroupColumnKey[];
+  onApply: (filters: InventoryFilters | null, columns: InventoryColumnKey[], groupColumns: InventoryGroupColumnKey[]) => void;
   onToast: (toast: TemplateToast) => void;
 };
 
 const repository = createSavedInventoryViewRepository(browserKeyValueStorage);
 
-export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filters, columns, onApply, onToast }: InventoryViewTemplatesProps) {
+// Operational documentation: ./InventoryViewTemplates.operations.md
+export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filters, columns, groupColumns, onApply, onToast }: InventoryViewTemplatesProps) {
   const [templates, setTemplates] = useState<SavedInventoryView[]>([]);
   const [defaultTemplateId, setDefaultTemplateId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -74,7 +76,7 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
     didAutoApplyRef.current = true;
     if (!autoApplyDefaultOnEntry) return;
     const defaultTemplate = templates.find((template) => template.id === defaultTemplateId) ?? templates[0];
-    if (defaultTemplate) onApply(defaultTemplate.filters, defaultTemplate.columns);
+    if (defaultTemplate) onApply(defaultTemplate.filters, defaultTemplate.columns, defaultTemplate.groupColumns);
   }, [autoApplyDefaultOnEntry, defaultTemplateId, isLoading, onApply, templates]);
 
   useEffect(() => {
@@ -123,7 +125,7 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
     setIsSaving(true);
     setFormError('');
     try {
-      await repository.create(userId, { name, filters, columns });
+      await repository.create(userId, { name, filters, columns, groupColumns });
       await refreshTemplates();
       setNewName('');
       setShowSaveForm(false);
@@ -136,7 +138,7 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
   };
 
   const applyTemplate = (template: SavedInventoryView) => {
-    onApply(template.filters, template.columns);
+    onApply(template.filters, template.columns, template.groupColumns);
     setIsOpen(false);
     setDefaultTemplateId(template.id);
     repository.setDefault(userId, template.id).catch(() => {
@@ -161,7 +163,7 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
   const updateTemplate = async (template: SavedInventoryView) => {
     setBusyId(template.id);
     try {
-      await repository.update(userId, template.id, { filters, columns });
+      await repository.update(userId, template.id, { filters, columns, groupColumns });
       await refreshTemplates();
       onToast({ message: `Template “${template.name}” atualizado.`, tone: 'success' });
     } catch {
@@ -298,7 +300,7 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
                       <>
                         <button type="button" onClick={() => applyTemplate(template)} className="block w-full rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
                           <span className="block truncate text-sm font-semibold text-slate-800">{template.name}</span>
-                          <span className="mt-1 block text-[11px] text-slate-400">Atualizado {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(template.updatedAt))} · {template.columns.length} coluna(s)</span>
+                          <span className="mt-1 block text-[11px] text-slate-400">Atualizado {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(template.updatedAt))} · {template.groupColumns.length} agrupada(s) · {template.columns.length} individual(is)</span>
                           {defaultTemplateId === template.id && <span className="mt-1 inline-flex rounded-md bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold text-primary">Abre automaticamente</span>}
                         </button>
                         <div className="mt-2 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2">

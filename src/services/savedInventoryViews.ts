@@ -4,7 +4,8 @@ import {
   operationalStatuses,
 } from '../types/inventory';
 import type { InventoryColumnKey, ItemState, ItemStatus, OperationalStatus } from '../types/inventory';
-import type { InventoryFilters, SavedInventoryView, SavedInventoryViewDraft } from '../types/inventoryViews';
+import { defaultInventoryGroupColumns } from '../types/inventoryViews';
+import type { InventoryFilters, InventoryGroupColumnKey, SavedInventoryView, SavedInventoryViewDraft } from '../types/inventoryViews';
 import { inventoryColumnOptions } from './inventoryReports';
 
 export type KeyValueStorage = {
@@ -21,9 +22,17 @@ export type SavedInventoryViewRepository = {
   remove: (userId: string, id: string) => Promise<void>;
 };
 
-const storageKeyForUser = (userId: string) => `cbmsp:inventory-views:v1:${encodeURIComponent(userId)}`;
+const storageKeyForUser = (userId: string) => `cbmsp:inventory-views:v2:${encodeURIComponent(userId)}`;
+const legacyStorageKeyForUser = (userId: string) => `cbmsp:inventory-views:v1:${encodeURIComponent(userId)}`;
 const defaultStorageKeyForUser = (userId: string) => `${storageKeyForUser(userId)}:default`;
+const legacyDefaultStorageKeyForUser = (userId: string) => `${legacyStorageKeyForUser(userId)}:default`;
 const validColumnKeys = new Set(inventoryColumnOptions.map(({ key }) => key));
+const validGroupColumnKeys = new Set<InventoryGroupColumnKey>([
+  'description',
+  'total',
+  ...operationalStatuses.map((status) => `operational:${status}` as const),
+  ...itemStatuses.map((status) => `status:${status}` as const),
+]);
 
 export const normalizeInventoryFilters = (filters: InventoryFilters | null): InventoryFilters | null => {
   if (!filters) return null;
@@ -66,17 +75,25 @@ const sanitizeColumns = (value: unknown): InventoryColumnKey[] => {
   return uniqueColumns.includes('nrPatrimonio') ? uniqueColumns : ['nrPatrimonio', ...uniqueColumns];
 };
 
+const sanitizeGroupColumns = (value: unknown): InventoryGroupColumnKey[] => {
+  const columns = stringValues(value).filter((column): column is InventoryGroupColumnKey => validGroupColumnKeys.has(column as InventoryGroupColumnKey));
+  const uniqueColumns = Array.from(new Set(columns));
+  if (uniqueColumns.length === 0) return [...defaultInventoryGroupColumns];
+  return ['description', ...uniqueColumns.filter((column) => column !== 'description')];
+};
+
 const parseSavedView = (value: unknown): SavedInventoryView | null => {
-  if (!isRecord(value) || value.version !== 1) return null;
+  if (!isRecord(value) || (value.version !== 1 && value.version !== 2)) return null;
   if (typeof value.id !== 'string' || typeof value.name !== 'string' || !value.name.trim()) return null;
   if (typeof value.createdAt !== 'string' || typeof value.updatedAt !== 'string') return null;
   if (!Number.isFinite(Date.parse(value.createdAt)) || !Number.isFinite(Date.parse(value.updatedAt))) return null;
   return {
     id: value.id,
     name: value.name.trim(),
-    version: 1,
+    version: 2,
     filters: sanitizeFilters(value.filters),
     columns: sanitizeColumns(value.columns),
+    groupColumns: sanitizeGroupColumns(value.version === 1 ? defaultInventoryGroupColumns : value.groupColumns),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
   };
@@ -91,21 +108,27 @@ const prepareDraft = (draft: SavedInventoryViewDraft) => {
     name,
     filters: normalizeInventoryFilters(draft.filters),
     columns: sanitizeColumns(draft.columns),
+    groupColumns: sanitizeGroupColumns(draft.groupColumns),
   };
 };
 
 export const createSavedInventoryViewRepository = (storage: KeyValueStorage): SavedInventoryViewRepository => {
   const list = async (userId: string) => {
-    const stored = await storage.getItem(storageKeyForUser(userId));
-    if (!stored) return [];
+    const storageKey = storageKeyForUser(userId);
+    const stored = await storage.getItem(storageKey);
+    const isLegacyData = stored === null;
+    const source = stored ?? await storage.getItem(legacyStorageKeyForUser(userId));
+    if (!source) return [];
 
     try {
-      const parsed: unknown = JSON.parse(stored);
+      const parsed: unknown = JSON.parse(source);
       if (!Array.isArray(parsed)) return [];
-      return parsed
+      const views = parsed
         .map(parseSavedView)
         .filter((view): view is SavedInventoryView => view !== null)
         .sort((first, second) => second.updatedAt.localeCompare(first.updatedAt));
+      if (isLegacyData) await storage.setItem(storageKey, JSON.stringify(views));
+      return views;
     } catch {
       return [];
     }
@@ -118,7 +141,11 @@ export const createSavedInventoryViewRepository = (storage: KeyValueStorage): Sa
   return {
     list,
     async getDefault(userId) {
-      const id = await storage.getItem(defaultStorageKeyForUser(userId));
+      const defaultKey = defaultStorageKeyForUser(userId);
+      const currentId = await storage.getItem(defaultKey);
+      if (currentId !== null) return currentId || null;
+      const id = await storage.getItem(legacyDefaultStorageKeyForUser(userId));
+      if (id !== null) await storage.setItem(defaultKey, id);
       return id || null;
     },
     async setDefault(userId, id) {
@@ -131,14 +158,14 @@ export const createSavedInventoryViewRepository = (storage: KeyValueStorage): Sa
       const now = new Date().toISOString();
       const view: SavedInventoryView = {
         id: createId(),
-        version: 1,
+        version: 2,
         ...prepareDraft(draft),
         createdAt: now,
         updatedAt: now,
       };
       const views = await list(userId);
       await write(userId, [view, ...views]);
-      const currentDefault = await storage.getItem(defaultStorageKeyForUser(userId));
+      const currentDefault = await storage.getItem(defaultStorageKeyForUser(userId)) ?? await storage.getItem(legacyDefaultStorageKeyForUser(userId));
       if (!currentDefault || !views.some((existing) => existing.id === currentDefault)) {
         await storage.setItem(defaultStorageKeyForUser(userId), view.id);
       }
@@ -154,6 +181,7 @@ export const createSavedInventoryViewRepository = (storage: KeyValueStorage): Sa
           name: changes.name ?? target.name,
           filters: changes.filters === undefined ? target.filters : changes.filters,
           columns: changes.columns ?? target.columns,
+          groupColumns: changes.groupColumns ?? target.groupColumns,
         }),
         updatedAt: new Date().toISOString(),
       };
@@ -164,7 +192,7 @@ export const createSavedInventoryViewRepository = (storage: KeyValueStorage): Sa
       const views = await list(userId);
       const remaining = views.filter((view) => view.id !== id);
       await write(userId, remaining);
-      const currentDefault = await storage.getItem(defaultStorageKeyForUser(userId));
+      const currentDefault = await storage.getItem(defaultStorageKeyForUser(userId)) ?? await storage.getItem(legacyDefaultStorageKeyForUser(userId));
       if (currentDefault === id || (currentDefault && !remaining.some((view) => view.id === currentDefault))) {
         await storage.setItem(defaultStorageKeyForUser(userId), remaining[0]?.id ?? '');
       }

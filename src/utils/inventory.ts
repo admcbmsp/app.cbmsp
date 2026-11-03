@@ -29,6 +29,11 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
 
 export const formatDateTime = (value: string) => dateTimeFormatter.format(new Date(value));
 
+export const getCityLabel = (city: City) => city
+  .replace(/^EB\s+/i, '')
+  .toLocaleLowerCase('pt-BR')
+  .replace(/(^|\s)\S/g, (part) => part.toLocaleUpperCase('pt-BR'));
+
 export const itemsForUnit = (items: InventoryItem[], unit: City | null) =>
   unit ? items.filter((item) => item.cidade === unit) : items;
 
@@ -73,38 +78,6 @@ export const getInitials = (user: AppUser) =>
     .map((name) => name[0])
     .join('')
     .toUpperCase();
-
-export const getStatusClasses = (status: ItemStatus) => {
-  const classes: Record<ItemStatus, string> = {
-    active: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-    pending: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-    rejected: 'bg-rose-50 text-rose-700 ring-rose-600/20',
-    deactivated: 'bg-slate-100 text-slate-600 ring-slate-500/20',
-  };
-
-  return classes[status];
-};
-
-export const getStateClasses = (state: ItemState) => {
-  const classes: Record<ItemState, string> = {
-    novo: 'bg-sky-50 text-sky-700 ring-sky-600/20',
-    bom: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',
-    regular: 'bg-orange-50 text-orange-700 ring-orange-600/20',
-  };
-
-  return classes[state];
-};
-
-export const getOperationalStatusClasses = (status: OperationalStatus) => {
-  const classes: Record<OperationalStatus, string> = {
-    operacional: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-    'em-manutencao': 'bg-amber-50 text-amber-700 ring-amber-600/20',
-    inservivel: 'bg-rose-50 text-rose-700 ring-rose-600/20',
-    'em-transito': 'bg-blue-50 text-blue-700 ring-blue-600/20',
-  };
-
-  return classes[status];
-};
 
 export const getTypeLabel = (type: string) => {
   const labels: Record<string, string> = {

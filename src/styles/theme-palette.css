@@ -42,6 +42,37 @@ html.dark {
   color-scheme: dark;
 }
 
+.inventory-badge {
+  background-color: color-mix(in srgb, var(--badge-tone-fill) 12%, var(--color-surface));
+  color: var(--badge-tone-color);
+  --tw-ring-color: color-mix(in srgb, var(--badge-tone-fill) 30%, transparent);
+}
+
+.inventory-badge--primary {
+  --badge-tone-color: var(--color-primary-strong);
+  --badge-tone-fill: var(--color-primary);
+}
+
+.inventory-badge--success {
+  --badge-tone-color: var(--color-success);
+  --badge-tone-fill: var(--color-success);
+}
+
+.inventory-badge--warning {
+  --badge-tone-color: var(--color-warning);
+  --badge-tone-fill: var(--color-warning);
+}
+
+.inventory-badge--error {
+  --badge-tone-color: var(--color-error);
+  --badge-tone-fill: var(--color-error);
+}
+
+.inventory-badge--neutral {
+  --badge-tone-color: var(--color-muted);
+  --badge-tone-fill: var(--color-muted);
+}
+
 html,
 body,
 #root {

@@ -3,7 +3,7 @@ import { BrandLogo } from '../components/BrandLogo';
 import { Icon, IconButton } from '../library';
 import { ThemeMode } from '../theme/theme';
 import { AppPage, AppUser, City } from '../types/inventory';
-import { getInitials, getRoleLabel } from '../utils/inventory';
+import { getCityLabel, getInitials, getRoleLabel } from '../utils/inventory';
 import { SideNav } from './SideNav';
 
 const pageDetails: Record<AppPage, { label: string; description: string }> = {
@@ -112,7 +112,7 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
           <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 md:flex">
             <span className="font-semibold tracking-tight text-white">{currentPageLabel}</span>
             <span className="h-1 w-1 rounded-full bg-primary" />
-            <span className="max-w-[30vw] truncate text-xs text-slate-400" title={`Unidade: ${selectedUnit ?? 'Todas as unidades'}`}>Unidade: {selectedUnit ?? 'Todas as unidades'}</span>
+            <span className="max-w-[30vw] truncate text-xs text-slate-400" title={`Unidade: ${selectedUnit ? getCityLabel(selectedUnit) : 'Todas as unidades'}`}>Unidade: {selectedUnit ? getCityLabel(selectedUnit) : 'Todas as unidades'}</span>
           </div>
 
           <div className="ml-auto flex items-center gap-3">

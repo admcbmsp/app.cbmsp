@@ -13,7 +13,7 @@ import { DynamicDataTable } from './components/DynamicDataTable';
 import type { TableAction } from './components/TableActionMenu';
 import { FilterDropdown } from './components/FilterDropdown';
 import { InventoryViewTemplates } from './components/InventoryViewTemplates';
-import { OperationalStatusBadge, StateBadge, StatusBadge } from './components/inventory/StatusBadges';
+import { BadgeKind, StatusBadge } from './components/inventory/StatusBadge';
 import { EditUserRoleModal } from './components/users/EditUserRoleModal';
 import { Label as FieldLabel, SelectInput, TextInput } from './library';
 import { inventorySeed } from './data/inventory';
@@ -51,6 +51,7 @@ import {
   formatCurrency,
   formatDateTime,
   formatQuantity,
+  getCityLabel,
   getRoleLabel,
   getTypeIcon,
   getTypeLabel,
@@ -70,7 +71,8 @@ import { createReportHtml } from './services/reportHtml';
 import { openPrintReport } from './services/printReport';
 import { applyTheme, getInitialTheme, ThemeMode } from './theme/theme';
 import { COLOR_TRANSITION_CLASS } from './theme/motion';
-import type { InventoryFilters } from './types/inventoryViews';
+import { defaultInventoryGroupColumns } from './types/inventoryViews';
+import type { InventoryFilters, InventoryGroupColumnKey } from './types/inventoryViews';
 import type { DynamicDataTableColumn } from './components/DynamicDataTable';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -524,9 +526,9 @@ function DashboardPage({
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-50 text-xs font-bold text-amber-700">{getTypeIcon(item.type)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-slate-800">{item.description}</span>
-                    <span className="mt-1 block text-xs text-slate-500">{item.nrPatrimonio} · {getTypeLabel(item.type)} · {item.cidade}</span>
+                    <span className="mt-1 block text-xs text-slate-500">{item.nrPatrimonio} · {getTypeLabel(item.type)} · {getCityLabel(item.cidade)}</span>
                   </span>
-                  <StatusBadge status={item.status} />
+                  <StatusBadge kind={BadgeKind.Status} value={item.status} />
                   <Icon name="edit" className="h-4 w-4 shrink-0 text-slate-400" />
                 </button>
               ))}
@@ -550,33 +552,34 @@ type InventorySummary = {
   stateCounts: Partial<Record<ItemState, number>>;
 };
 
+// Operational documentation: ./App.InventorySummaryCard.operations.md
 function InventorySummaryCard({ summary }: { summary: InventorySummary }) {
   const statesWithItems = (Object.entries(summary.stateCounts) as [ItemState, number][]).filter(([, count]) => count > 0);
 
   return (
-    <article className="rounded-md border border-primary bg-gradient-to-br from-white to-[var(--color-hover)] p-5 shadow-sm shadow-[var(--color-shadow)]">
+    <article className="rounded-md border border-line bg-card p-4 sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Tipo patrimonial</p>
-          <h3 className="mt-2 text-lg font-semibold leading-6 text-slate-950">{summary.description}</h3>
-          <p className="mt-1 text-xs font-medium text-slate-500">{getTypeLabel(summary.type)}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo patrimonial</p>
+          <h3 className="mt-1.5 break-words text-base font-semibold leading-6 text-foreground">{summary.description}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{getTypeLabel(summary.type)}</p>
         </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--color-hover)] text-xs font-bold text-primary">{getTypeIcon(summary.type)}</div>
+        <div className="shrink-0 text-right">
+          <p className="text-2xl font-semibold tabular-nums leading-none text-foreground">{formatQuantity(summary.total)}</p>
+          <p className="mt-1.5 text-xs text-muted-foreground">itens no total</p>
+        </div>
       </div>
 
-      <div className="mt-5 flex items-baseline gap-2 border-t border-primary pt-4">
-        <span className="text-3xl font-semibold tracking-tight text-slate-950">{formatQuantity(summary.total)}</span>
-        <span className="text-sm text-slate-500">itens no total</span>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {statesWithItems.map(([state, count]) => (
-          <div key={state} className="rounded-md bg-white/80 px-3 py-2.5 ring-1 ring-inset ring-slate-100">
-            <p className="text-lg font-semibold text-slate-950">{formatQuantity(count)}</p>
-            <p className="mt-0.5 text-[11px] font-medium leading-4 text-slate-500">{stateLabels[state]}</p>
-          </div>
-        ))}
-      </div>
+      {statesWithItems.length > 0 && (
+        <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 sm:grid-cols-4">
+          {statesWithItems.map(([state, count]) => (
+            <div key={state} className="rounded-sm border border-line bg-surface-muted px-3 py-2">
+              <dt className="text-xs leading-4 text-muted-foreground">{stateLabels[state]}</dt>
+              <dd className="mt-0.5 text-lg font-semibold tabular-nums leading-6 text-foreground">{formatQuantity(count)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </article>
   );
 }
@@ -587,33 +590,26 @@ const inventoryDetailColumns: DynamicDataTableColumn<InventoryItem, InventoryCol
     label: 'Número de patrimônio',
     locked: true,
     sortValue: (item) => item.nrPatrimonio,
-    renderCell: (item) => <span className="inline-flex rounded-md bg-[var(--color-hover)] px-3 py-2 font-mono text-base font-bold text-primary">{item.nrPatrimonio}</span>,
+    renderCell: (item) => <span className="text-sm font-semibold text-slate-700">{item.nrPatrimonio}</span>,
   },
-  { key: 'item', label: 'Descrição do cadastro', sortValue: (item) => item.description, renderCell: (item) => <span className="text-sm text-slate-600">{item.description}</span> },
-  { key: 'uuid', label: 'UUID', sortValue: (item) => item.uuid, renderCell: (item) => <span className="block max-w-[220px] truncate font-mono text-[11px] text-slate-500">{item.uuid}</span> },
+  { key: 'item', label: 'Descrição do cadastro', align: 'start', sortValue: (item) => item.description, renderCell: (item) => <span className="text-sm text-slate-600">{item.description}</span> },
+  { key: 'uuid', label: 'UUID', sortValue: (item) => item.uuid, renderCell: (item) => <span className="block max-w-[220px] truncate font-mono text-sm text-slate-500">{item.uuid}</span> },
   { key: 'type', label: 'Tipo', sortValue: (item) => getTypeLabel(item.type), renderCell: (item) => <span className="text-sm text-slate-600">{getTypeLabel(item.type)}</span> },
-  { key: 'cidade', label: 'Cidade/unidade', sortValue: (item) => item.cidade, renderCell: (item) => <span className="text-sm text-slate-600">{item.cidade || '—'}</span> },
-  { key: 'state', label: 'Condição', sortValue: (item) => stateLabels[item.state], renderCell: (item) => <StateBadge state={item.state} /> },
-  { key: 'operationalStatus', label: 'Status operacional', sortValue: (item) => operationalStatusLabels[item.operationalStatus], renderCell: (item) => <OperationalStatusBadge status={item.operationalStatus} /> },
+  { key: 'cidade', label: 'Cidade/unidade', sortValue: (item) => getCityLabel(item.cidade), renderCell: (item) => <span className="text-sm text-slate-600">{getCityLabel(item.cidade) || '—'}</span> },
+  { key: 'state', label: 'Condição', sortValue: (item) => stateLabels[item.state], renderCell: (item) => <StatusBadge kind={BadgeKind.State} value={item.state} size="regular" /> },
+  { key: 'operationalStatus', label: 'Status operacional', sortValue: (item) => operationalStatusLabels[item.operationalStatus], renderCell: (item) => <StatusBadge kind={BadgeKind.OperationalStatus} value={item.operationalStatus} size="regular" /> },
   { key: 'valor', label: 'Valor estimado', numeric: true, sortValue: (item) => item.valor, renderCell: (item) => <span className="text-sm text-slate-700">{formatCurrency(item.valor)}</span> },
-  { key: 'status', label: 'Status administrativo', sortValue: (item) => statusLabels[item.status], renderCell: (item) => <StatusBadge status={item.status} /> },
-  { key: 'lastTimeTouched', label: 'Última movimentação', sortValue: (item) => Date.parse(item.lastTimeTouched), renderCell: (item) => <span className="whitespace-nowrap text-xs text-slate-500">{formatDateTime(item.lastTimeTouched)}</span> },
+  { key: 'status', label: 'Status administrativo', sortValue: (item) => statusLabels[item.status], renderCell: (item) => <StatusBadge kind={BadgeKind.Status} value={item.status} size="regular" /> },
+  { key: 'lastTimeTouched', label: 'Última movimentação', sortValue: (item) => Date.parse(item.lastTimeTouched), renderCell: (item) => <span className="whitespace-nowrap text-sm text-slate-500">{formatDateTime(item.lastTimeTouched)}</span> },
 ];
 
 type InventoryGroupRow = [string, InventoryItem[]];
-type InventoryGroupColumnKey = 'description' | 'total' | `operational:${OperationalStatus}` | `status:${ItemStatus}`;
-
-const defaultInventoryGroupColumns: InventoryGroupColumnKey[] = [
-  'description',
-  'total',
-  ...operationalStatuses.map((status) => `operational:${status}` as const),
-  ...itemStatuses.map((status) => `status:${status}` as const),
-];
 
 const inventoryGroupColumns: DynamicDataTableColumn<InventoryGroupRow, InventoryGroupColumnKey>[] = [
   {
     key: 'description',
     label: 'Item',
+    align: 'start',
     locked: true,
     sortValue: ([description]) => description,
     renderCell: ([description]) => <span className="font-medium text-foreground">{description}</span>,
@@ -641,6 +637,7 @@ const inventoryGroupColumns: DynamicDataTableColumn<InventoryGroupRow, Inventory
   })),
 ];
 
+// Operational documentation: ./App.InventoryPage.operations.md
 function InventoryPage({
   user,
   items,
@@ -677,7 +674,9 @@ function InventoryPage({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<InventoryColumnKey[]>(defaultInventoryColumns);
-  const [visibleGroupColumns, setVisibleGroupColumns] = useState<InventoryGroupColumnKey[]>(defaultInventoryGroupColumns);
+  const [visibleGroupColumns, setVisibleGroupColumns] = useState<InventoryGroupColumnKey[]>([...defaultInventoryGroupColumns]);
+  const [groupColumnControlTarget, setGroupColumnControlTarget] = useState<HTMLDivElement | null>(null);
+  const [detailColumnControlTarget, setDetailColumnControlTarget] = useState<HTMLDivElement | null>(null);
   const [autoApplyDefaultOnEntry] = useState(() => initialFilter === null);
 
   useEffect(() => {
@@ -736,7 +735,7 @@ function InventoryPage({
     });
     return Array.from(grouped.entries()).sort(([first], [second]) => first.localeCompare(second, 'pt-BR'));
   }, [filteredItems]);
-  const detailItems = visibleItems.filter((item) => item.description === selectedDescription);
+  const detailItems = useMemo(() => visibleItems.filter((item) => item.description === selectedDescription), [selectedDescription, visibleItems]);
   const displayedItems = selectedDescription === null ? filteredItems : detailItems;
 
   const exportGroups = () => {
@@ -821,11 +820,12 @@ function InventoryPage({
     operationalStatuses: operationalStatusFilters,
   });
 
-  const applySavedView = (filters: InventoryFilters | null, columns: InventoryColumnKey[]) => {
+  const applySavedView = (filters: InventoryFilters | null, columns: InventoryColumnKey[], groupColumns: InventoryGroupColumnKey[]) => {
     const roleSafeFilters = user.role === 'reader'
       ? normalizeInventoryFilters({ ...(filters ?? {}), statuses: filters?.statuses?.filter((status) => status === 'active') })
       : normalizeInventoryFilters(filters);
     const roleSafeColumns: InventoryColumnKey[] = columns.includes('nrPatrimonio') ? columns : ['nrPatrimonio', ...columns];
+    const roleSafeGroupColumns: InventoryGroupColumnKey[] = groupColumns.includes('description') ? groupColumns : ['description', ...groupColumns];
     setSelectedDescription(null);
     setQuery(roleSafeFilters?.query ?? '');
     setTypeFilters(roleSafeFilters?.types ?? []);
@@ -833,6 +833,7 @@ function InventoryPage({
     setStateFilters(roleSafeFilters?.states ?? []);
     setOperationalStatusFilters(roleSafeFilters?.operationalStatuses ?? []);
     setVisibleColumns(roleSafeColumns);
+    setVisibleGroupColumns(roleSafeGroupColumns);
     setSummaryVisible(false);
     setSuggestionsOpen(false);
     onFilterChange(roleSafeFilters);
@@ -848,7 +849,16 @@ function InventoryPage({
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">{selectedDescription === null ? 'Consulte os totais por descrição e abra um item para ver seus patrimônios.' : `${detailItems.length} patrimônio(s) visível(is) neste cadastro. Cada número de patrimônio corresponde a uma unidade.`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <InventoryViewTemplates userId={user.id} autoApplyDefaultOnEntry={autoApplyDefaultOnEntry} filters={currentFilters} columns={visibleColumns} onApply={applySavedView} onToast={onToast} />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => selectedDescription === null ? exportGroups() : onExportCurrent(detailItems, visibleColumns)}
+            disabled={displayedItems.length === 0}
+          >
+            <Icon name="download" className="h-4 w-4" />
+            Exportar PDF
+          </Button>
+          <InventoryViewTemplates userId={user.id} autoApplyDefaultOnEntry={autoApplyDefaultOnEntry} filters={currentFilters} columns={visibleColumns} groupColumns={visibleGroupColumns} onApply={applySavedView} onToast={onToast} />
           {canCreateItems(user.role) && (
             <Button onClick={onCreate}>
               <Icon name="plus" className="h-4 w-4" />
@@ -858,7 +868,7 @@ function InventoryPage({
         </div>
       </section>
 
-      <section hidden={selectedDescription !== null} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/40 sm:p-5">
+      <section aria-label="Busca e filtros" hidden={selectedDescription !== null}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
             <label htmlFor="inventory-search" className="sr-only">Descrição ou patrimônio</label>
@@ -883,6 +893,7 @@ function InventoryPage({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {selectedDescription === null && <div ref={setGroupColumnControlTarget} className="shrink-0" />}
             <FilterDropdown
               id="inventory-type-filter"
               label="Tipo"
@@ -924,32 +935,9 @@ function InventoryPage({
             {hasFilters && <Button type="button" variant="ghost" onClick={clearFilters} className="min-h-10 px-3">Limpar</Button>}
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
-          <Icon name="filter" className="h-4 w-4 text-slate-400" />
-          <span><strong className="font-bold text-slate-800">{formatQuantity(filteredItems.length)}</strong> resultado(s) de {formatQuantity(visibleItems.length)} visível(is)</span>
-          <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
-          <span className="text-slate-400">Perfil: {getRoleLabel(user.role)}</span>
-          <Button type="button" variant="secondary" onClick={exportGroups} disabled={filteredItems.length === 0} className="ml-auto min-h-9 px-3 py-1.5 text-xs">
-            <Icon name="download" className="h-3.5 w-3.5" />
-            Exportar PDF
-          </Button>
-          {query.trim().length >= 3 && (
-            <Button
-              type="button"
-              variant="secondary"
-              aria-pressed={summaryVisible}
-              onClick={() => { setSummaryVisible((current) => !current); setSuggestionsOpen(false); }}
-              disabled={filteredItems.length === 0}
-              className="ml-auto min-h-9 px-3 py-1.5 text-xs"
-            >
-              <Icon name="archive" className="h-3.5 w-3.5" />
-              {summaryVisible ? 'Ocultar resumo' : 'Fazer resumo'}
-            </Button>
-          )}
-        </div>
       </section>
 
-      {selectedDescription === null && summaryVisible && summaries.length > 0 && (
+      {selectedDescription === null && summaryVisible && (
         <section aria-label="Resumo da busca" aria-live="polite" className="mt-5">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -958,19 +946,37 @@ function InventoryPage({
             </div>
             <span className="hidden text-xs font-medium text-slate-400 sm:block">{formatQuantity(filteredItems.length)} item(ns) considerado(s)</span>
           </div>
-          <div className="mt-3 grid gap-4 xl:grid-cols-2">
-            {summaries.map((summary) => <InventorySummaryCard key={`${summary.type}-${summary.description}`} summary={summary} />)}
-          </div>
+          {summaries.length > 0 ? (
+            <div className="mt-3 grid gap-4 xl:grid-cols-2">
+              {summaries.map((summary) => <InventorySummaryCard key={`${summary.type}-${summary.description}`} summary={summary} />)}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-md border border-slate-200 bg-white px-4 py-5 text-sm text-slate-500">Nenhum resultado corresponde à busca e aos filtros aplicados.</p>
+          )}
         </section>
       )}
 
-      <section className="mt-5 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm shadow-slate-200/40">
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
+      <section aria-label="Bens cadastrados" className="mt-5 min-w-0">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-slate-950">Bens cadastrados</p>
-            <p className="mt-1 text-xs text-slate-500">{selectedDescription === null ? `${groups.length} descrição(ões) · Totais em patrimônios cadastrados, conforme os filtros e o perfil.` : 'Detalhes individuais e histórico de movimentações'}</p>
+            <h2 className="text-sm font-semibold text-slate-950">Bens cadastrados</h2>
+            <p className="mt-1 text-xs text-slate-500">{selectedDescription === null ? `${formatQuantity(groups.length)} descrição(ões) · ${formatQuantity(filteredItems.length)} patrimônio(s) filtrado(s) de ${formatQuantity(visibleItems.length)} visível(is).` : 'Detalhes individuais e histórico de movimentações'}</p>
           </div>
-          <div className="hidden items-center gap-2 text-xs text-slate-400 sm:flex"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Dados locais</div>
+          {selectedDescription === null ? (
+            <Button
+              type="button"
+              variant="secondary"
+              aria-pressed={summaryVisible}
+              onClick={() => { setSummaryVisible((current) => !current); setSuggestionsOpen(false); }}
+              disabled={!hasFilters}
+              className="min-h-9 px-3 py-1.5 text-xs"
+            >
+              <Icon name="archive" className="h-3.5 w-3.5" />
+              {summaryVisible ? 'Ocultar resumo' : 'Fazer resumo'}
+            </Button>
+          ) : (
+            <div ref={setDetailColumnControlTarget} className="shrink-0" />
+          )}
         </div>
         {selectedDescription === null ? (
           <DynamicDataTable<InventoryGroupRow, InventoryGroupColumnKey>
@@ -980,6 +986,7 @@ function InventoryPage({
             visibleColumnKeys={visibleGroupColumns}
             defaultColumnKeys={defaultInventoryGroupColumns}
             onVisibleColumnKeysChange={setVisibleGroupColumns}
+            columnControlTarget={groupColumnControlTarget}
             getRowKey={([description]) => description}
             getRowLabel={([description]) => `Abrir patrimônios de ${description}`}
             onRowClick={([description]) => { setSelectedDescription(description); setSuggestionsOpen(false); }}
@@ -993,9 +1000,6 @@ function InventoryPage({
           />
         ) : (
           <>
-            <div className="flex flex-wrap gap-3 px-5 py-3">
-              <Button variant="secondary" onClick={() => onExportCurrent(detailItems, visibleColumns)}>Exportar PDF</Button>
-            </div>
             <DynamicDataTable
               ariaLabel="Detalhes individuais dos patrimônios"
               rows={detailItems}
@@ -1003,6 +1007,7 @@ function InventoryPage({
               visibleColumnKeys={visibleColumns}
               defaultColumnKeys={defaultInventoryColumns}
               onVisibleColumnKeysChange={setVisibleColumns}
+              columnControlTarget={detailColumnControlTarget}
               getRowKey={(item) => item.uuid}
               getActionMenuLabel={(item) => `Ações para ${item.description}, ${item.nrPatrimonio}`}
               getActions={(item): TableAction[] => [
@@ -1017,7 +1022,7 @@ function InventoryPage({
           </>
         )}
         {displayedItems.length === 0 && (
-          <div className="border-t border-slate-100 px-6 py-14 text-center">
+          <div className="py-10 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-slate-100 text-slate-400"><Icon name="search" className="h-5 w-5" /></div>
             <p className="mt-4 text-sm font-semibold text-slate-800">Nenhum bem encontrado</p>
             <p className="mt-1 text-sm text-slate-500">Tente ajustar a busca ou limpar os filtros.</p>
@@ -1051,15 +1056,15 @@ function HistoryDrawer({
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Histórico</p>
             <h2 className="mt-2 max-w-sm break-words text-xl font-semibold leading-7 text-slate-950">Histórico de alterações</h2>
             <p className="mt-1 break-words text-sm font-medium text-slate-600">{item.description}</p>
-            <p className="mt-1 break-words text-xs text-slate-500">Patrimônio {item.nrPatrimonio} · {item.cidade}</p>
+            <p className="mt-1 break-words text-xs text-slate-500">Patrimônio {item.nrPatrimonio} · {getCityLabel(item.cidade)}</p>
           </div>
           <IconButton label="Fechar histórico" onClick={onClose} className="shrink-0"><Icon name="close" className="h-5 w-5" /></IconButton>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={item.status} />
-            <StateBadge state={item.state} />
-            <OperationalStatusBadge status={item.operationalStatus} />
+            <StatusBadge kind={BadgeKind.Status} value={item.status} />
+            <StatusBadge kind={BadgeKind.State} value={item.state} />
+            <StatusBadge kind={BadgeKind.OperationalStatus} value={item.operationalStatus} />
             <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{getTypeLabel(item.type)}</span>
           </div>
 
@@ -1129,14 +1134,14 @@ function ItemFormModal({
   );
   const effectiveStatus = !isEditing && (role === 'adm' || hasApprovedRegistration(items, form.description)) ? 'active' : form.status;
   const [error, setError] = useState('');
-  const [cityQuery, setCityQuery] = useState<string>(item?.cidade ?? defaultCity ?? City.EB_PAULINIA);
+  const [cityQuery, setCityQuery] = useState<string>(getCityLabel(item?.cidade ?? defaultCity ?? City.EB_PAULINIA));
   const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
 
   const citySuggestions = useMemo(() => {
     const normalizedQuery = normalizeSearchText(cityQuery.trim());
 
     return cityOptions
-      .filter((city) => !normalizedQuery || normalizeSearchText(city).includes(normalizedQuery))
+      .filter((city) => !normalizedQuery || normalizeSearchText(getCityLabel(city)).includes(normalizedQuery))
       .slice(0, 4);
   }, [cityQuery]);
 
@@ -1152,7 +1157,7 @@ function ItemFormModal({
   };
 
   const selectCity = (city: City) => {
-    setCityQuery(city);
+    setCityQuery(getCityLabel(city));
     setCitySuggestionsOpen(false);
     setError('');
     updateField('cidade', city);
@@ -1164,7 +1169,8 @@ function ItemFormModal({
       setError('Preencha a descrição, o número de patrimônio e a cidade/unidade.');
       return;
     }
-    if (!cityOptions.includes(form.cidade) || form.cidade !== cityQuery) {
+    const selectedCity = cityOptions.find((city) => normalizeSearchText(getCityLabel(city)) === normalizeSearchText(cityQuery.trim()));
+    if (!selectedCity || form.cidade !== selectedCity) {
       setError('Selecione uma cidade/unidade disponível na lista.');
       return;
     }
@@ -1233,7 +1239,7 @@ function ItemFormModal({
                           onClick={() => selectCity(city)}
                           className={`flex w-full items-center rounded-md px-3 py-2.5 text-left text-sm font-medium text-slate-700 ${COLOR_TRANSITION_CLASS} hover:bg-[var(--color-hover)] hover:text-primary`}
                         >
-                          {city}
+                          {getCityLabel(city)}
                         </button>
                       </li>
                     ))}
@@ -1533,7 +1539,7 @@ function App() {
           const cityChanged = currentItem.cidade !== values.cidade;
           const statusChanged = currentItem.status !== nextStatus;
           const summary = cityChanged
-            ? `Cidade/unidade alterada de ${currentItem.cidade} para ${values.cidade}.`
+            ? `Cidade/unidade alterada de ${getCityLabel(currentItem.cidade)} para ${getCityLabel(values.cidade)}.`
             : statusChanged
               ? `Status administrativo alterado de ${statusLabels[currentItem.status]} para ${statusLabels[nextStatus]}.`
               : 'Dados do patrimônio atualizados.';

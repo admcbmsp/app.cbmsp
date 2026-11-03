@@ -2,7 +2,7 @@ import { FormEvent, useState } from 'react';
 import { Badge, Button, CardBox, Heading, InputField, SelectField } from '../library';
 import { cityOptions } from '../types/inventory';
 import type { AppUser, City } from '../types/inventory';
-import { getRoleLabel } from '../utils/inventory';
+import { getCityLabel, getRoleLabel } from '../utils/inventory';
 
 export type UserProfileValues = Pick<AppUser, 'firstName' | 'lastName' | 'patente' | 'unidade' | 'telefoneContato'>;
 
@@ -75,7 +75,7 @@ export function ProfilePage({ user, onSave }: ProfilePageProps) {
               label="Unidade"
               value={profile.unidade}
               onChange={(event) => updateField('unidade', event.target.value as City | '')}
-              options={cityOptions.map((city) => ({ value: city, label: city }))}
+              options={cityOptions.map((city) => ({ value: city, label: getCityLabel(city) }))}
               placeholder="Selecione uma unidade"
             />
             <InputField
