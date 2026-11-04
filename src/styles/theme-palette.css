@@ -1,4 +1,5 @@
 :root {
+  --application-topbar-height: 4rem;
   --color-background: #f4f7fb;
   --color-foreground: #172033;
   --color-surface: #ffffff;
@@ -80,21 +81,71 @@ html.dark {
 }
 
 .application-shell {
-  display: flex;
-  flex: 1 0 auto;
-  flex-direction: column;
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-rows: var(--application-topbar-height) minmax(0, 1fr);
   width: 100%;
   min-width: 320px;
-  min-height: max(100vh, 667px);
-  min-height: max(100dvh, 667px);
+}
+
+.application-topbar {
+  position: relative;
+  z-index: 30;
+  height: var(--application-topbar-height);
 }
 
 .application-container {
-  display: flex;
-  flex: 1 0 auto;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
   width: 100%;
   min-width: 0;
+  min-height: 0;
+}
+
+.application-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.application-view-slot {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-rows: minmax(0, 1fr);
+  width: 100%;
+  min-height: 0;
+}
+
+.application-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
+.application-page-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.application-page-actions {
+  margin-top: auto;
+}
+
+.application-side-navigation-overlay {
+  top: var(--application-topbar-height);
+}
+
+.application-login {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 320px;
 }
 
 html,

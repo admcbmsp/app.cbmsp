@@ -45,8 +45,8 @@ export function ProfilePage({ user, onSave }: ProfilePageProps) {
   };
 
   return (
-    <section aria-labelledby="profile-page-title">
-      <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+    <section aria-labelledby="profile-page-title" className="application-page">
+      <header className="mb-7 flex shrink-0 flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Conta pessoal</p>
           <Heading id="profile-page-title" level={1} className="mt-2 text-3xl sm:text-4xl">Meu perfil</Heading>
@@ -55,7 +55,7 @@ export function ProfilePage({ user, onSave }: ProfilePageProps) {
         <Badge variant="info" size="md">{getRoleLabel(user.role)}</Badge>
       </header>
 
-      <form onSubmit={handleSubmit} className="max-w-3xl">
+      <form onSubmit={handleSubmit} className="application-page-form max-w-3xl">
         <CardBox>
           <div className="mb-6 border-b border-slate-100 pb-5">
             <h2 className="text-base font-semibold text-slate-950">Dados do usuário</h2>
@@ -106,7 +106,7 @@ export function ProfilePage({ user, onSave }: ProfilePageProps) {
           </div>
         </CardBox>
 
-        <div className="mt-5 flex justify-end">
+        <div className="application-page-actions flex justify-end">
           <Button type="submit">Salvar perfil</Button>
         </div>
       </form>

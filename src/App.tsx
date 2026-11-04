@@ -74,6 +74,7 @@ import { createReportHtml } from './services/reportHtml';
 import { openPrintReport } from './services/printReport';
 import { applyTheme, getInitialTheme, ThemeMode } from './theme/theme';
 import { COLOR_TRANSITION_CLASS } from './theme/motion';
+import { useApplicationViewportHeight } from './hooks/useApplicationViewportHeight';
 import { defaultInventoryGroupColumns } from './types/inventoryViews';
 import type { InventoryFilters, InventoryGroupColumnKey } from './types/inventoryViews';
 import type { DynamicDataTableColumn } from './components/DynamicDataTable';
@@ -176,6 +177,7 @@ function IconButton({
 }
 
 function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
+  const applicationHeight = useApplicationViewportHeight();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -200,7 +202,7 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
   };
 
   return (
-    <main className="application-shell overflow-hidden bg-[#0b1224] text-white">
+    <main className="application-login overflow-hidden bg-[#0b1224] text-white" style={{ height: `${applicationHeight}px` }}>
       <div className="mx-auto grid min-h-screen max-w-[1500px] flex-1 lg:grid-cols-[1.08fr_0.92fr]">
         <section className="relative hidden overflow-hidden px-12 py-12 lg:flex lg:flex-col lg:justify-between xl:px-20">
           <div className="relative flex items-center gap-3">
