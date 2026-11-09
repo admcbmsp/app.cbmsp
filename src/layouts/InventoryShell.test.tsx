@@ -14,7 +14,7 @@ const user: AppUser = {
   telefoneContato: '',
 };
 
-test('sets a definite pixel height on the main content area', () => {
+test('lets page content grow so the document can scroll naturally', () => {
   const { container } = render(
     <InventoryShell
       user={user}
@@ -33,13 +33,15 @@ test('sets a definite pixel height on the main content area', () => {
       </>
     </InventoryShell>,
   );
-  const expectedShellHeight = Math.max(window.innerHeight, 667);
+  const shell = container.querySelector('.application-shell') as HTMLElement;
   const main = container.querySelector('.application-main') as HTMLElement;
   const viewSlot = container.querySelector('.application-view-slot') as HTMLElement;
 
-  expect(container.querySelector('.application-shell')).toHaveStyle({ height: `${expectedShellHeight}px` });
-  expect(container.querySelector('.application-shell')).toHaveClass('overflow-hidden');
-  expect(main).toHaveClass('overflow-x-hidden', 'overscroll-y-contain');
+  expect(shell).toHaveClass('application-shell');
+  expect(shell).not.toHaveClass('overflow-hidden');
+  expect(shell.style.height).toBe('');
+  expect(shell.style.maxHeight).toBe('');
+  expect(main).not.toHaveClass('overflow-y-auto', 'overscroll-y-contain');
   expect(main.style.height).toBe('');
   expect(viewSlot).toHaveClass('flex', 'flex-col');
   expect(viewSlot.children[0]).toBe(screen.getByTestId('first-view-section'));

@@ -53,8 +53,10 @@ test('renders the prototype login screen', () => {
   expect(screen.getByRole('heading', { name: /entrar no almoxarifado/i })).toBeInTheDocument();
   expect(screen.getByText(/acesso rápido por perfil/i)).toBeInTheDocument();
   const login = screen.getByRole('main');
-  expect(login).toHaveStyle({ minHeight: `${Math.max(window.innerHeight, 667)}px` });
+  expect(login).toHaveClass('application-login');
   expect(login.style.height).toBe('');
+  expect(login.style.minHeight).toBe('');
+  expect(login.firstElementChild).not.toHaveClass('min-h-screen');
   expect(login.querySelector('.bg-slate-50')).not.toHaveClass('min-h-screen');
 });
 
