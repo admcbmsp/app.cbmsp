@@ -92,7 +92,7 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
   };
 
   return (
-    <div className="application-shell bg-slate-100 text-slate-900" style={{ height: `${applicationHeight}px`, maxHeight: `${applicationHeight}px` }}>
+    <div className="application-shell overflow-hidden bg-slate-100 text-slate-900" style={{ height: `${applicationHeight}px`, maxHeight: `${applicationHeight}px` }}>
       <header className="application-topbar border-b border-slate-800 bg-slate-950 text-slate-100 shadow-lg shadow-slate-950/20">
         <div className="relative mx-auto flex h-full w-full items-center px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-2">
@@ -137,8 +137,8 @@ export function InventoryShell({ user, page, onNavigate, onLogout, onExportAll, 
       </header>
 
       <div className="application-container">
-        <main id="main-content" tabIndex={-1} className="application-main px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-9">
-          <div className="application-view-slot">
+        <main id="main-content" tabIndex={-1} className="application-main overflow-x-hidden overscroll-y-contain px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-9">
+          <div className="application-view-slot flex flex-col">
             {children}
           </div>
         </main>
