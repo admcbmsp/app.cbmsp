@@ -1,6 +1,7 @@
 // Operational documentation: ./Dialog.operations.md
 import { ButtonHTMLAttributes, ReactNode, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import './Dialog.css';
 import { Button } from '../library/Button';
 import type { ButtonVariant } from '../library/utils/buttonStyles';
 import { Icon } from './Icon';
@@ -31,9 +32,9 @@ type DialogProps = {
 };
 
 const dialogSizeClasses: Record<DialogSize, string> = {
-  sm: 'max-w-md',
-  md: 'max-w-xl',
-  lg: 'max-w-2xl',
+  sm: 'sm:max-w-md',
+  md: 'sm:max-w-xl',
+  lg: 'sm:max-w-2xl',
 };
 
 const actionButtonVariants: Record<DialogActionVariant, ButtonVariant> = {
@@ -130,7 +131,7 @@ export function Dialog({
   const requestClose = () => onOpenChange(false);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
       <div
         aria-hidden="true"
         onPointerDown={requestClose}
@@ -143,7 +144,7 @@ export function Dialog({
         aria-labelledby={titleId}
         aria-describedby={caption ? captionId : undefined}
         tabIndex={-1}
-        className={`relative z-10 flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-md border border-line bg-card shadow-2xl ${dialogSizeClasses[size]}`}
+        className={`dialog-panel relative z-10 flex max-h-[90vh] w-full max-w-none flex-col overflow-hidden rounded-t-md border border-line bg-card shadow-2xl sm:max-h-[calc(100vh-2rem)] sm:rounded-md ${dialogSizeClasses[size]}`}
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-6 py-5 sm:px-7">
           <div className="min-w-0">

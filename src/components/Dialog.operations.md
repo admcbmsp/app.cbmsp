@@ -23,6 +23,7 @@ Provide the shared modal shell and lifecycle interactions for application dialog
 - While open, focus moves to the first focusable element (or the panel if none exists), Tab and Shift+Tab remain inside, and closing restores focus to the element active before opening when it is still connected.
 - While open, body scrolling is locked and restored when the dialog closes or unmounts.
 - The panel body scrolls independently from its header and action footer.
+- Below 640 px, the full-width panel is anchored to the bottom and slides upward when opened. At 640 px and wider, it remains a centered modal. Reduced-motion preferences disable the mobile entrance animation.
 - The dialog is portaled to `document.body` to avoid clipping and stacking contexts in consumers.
 
 ## UI and accessibility
