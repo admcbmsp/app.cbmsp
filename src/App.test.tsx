@@ -52,6 +52,10 @@ test('renders the prototype login screen', () => {
   render(<App />);
   expect(screen.getByRole('heading', { name: /entrar no almoxarifado/i })).toBeInTheDocument();
   expect(screen.getByText(/acesso rápido por perfil/i)).toBeInTheDocument();
+  const login = screen.getByRole('main');
+  expect(login).toHaveStyle({ minHeight: `${Math.max(window.innerHeight, 667)}px` });
+  expect(login.style.height).toBe('');
+  expect(login.querySelector('.bg-slate-50')).not.toHaveClass('min-h-screen');
 });
 
 test('reader can access the stock but cannot create items', () => {
