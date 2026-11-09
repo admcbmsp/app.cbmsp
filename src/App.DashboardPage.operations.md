@@ -14,9 +14,9 @@ Present the signed-in user's inventory overview, quick filters, recent history, 
 
 ## Recent movements
 
-- The heading and **Controle de patrimônio** link sit directly above the table. Do not wrap this area in a decorative card, border, shadow, avatar, or image.
-- The table is implemented in [`RecentMovementsTable`](./components/inventory/RecentMovementsTable.operations.md), with columns **Item**, **Ação**, **Data**, and **Responsável**.
-- An administrator activating a pending item's row opens the edit flow. Other rows open that item's history.
+- The heading and **Controle de patrimônio** link sit directly above the recent movements.
+- Recent movements are implemented in [`RecentMovementsTable`](./components/inventory/RecentMovementsTable.operations.md), with cards below 1280 px and a table at wider sizes. Both layouts show **Item**, **Ação**, **Data**, and **Responsável**.
+- An administrator activating a pending item's movement opens the edit flow. Other movements open that item's history.
 - The event labels and action semantics come from the shared `InventoryHistoryAction` taxonomy; see the table's operational document.
 
 ## Other overview content
@@ -27,8 +27,8 @@ Present the signed-in user's inventory overview, quick filters, recent history, 
 
 ## UI and accessibility
 
-- Use semantic headings and theme text/surface tokens. Keep recent movements in a standard table that scrolls horizontally at narrow widths.
-- Table row activation supports pointer, Enter, and Space. The table component owns focus and hover presentation.
+- Use semantic headings and theme text/surface tokens. Recent movement cards and table use the same data and activation behavior.
+- Movement activation supports pointer, Enter, and Space. The component owns focus and hover presentation.
 - Preserve labels and keyboard access for quick filters, pending items, and navigation actions.
 
 ## Dependencies and decisions
@@ -40,5 +40,5 @@ Recent movements are limited to six to keep the overview short. The event vocabu
 ## Verification
 
 - Check role-specific content, latest-first ordering, the six-row limit, empty history, and row navigation.
-- Check the recent table in light and dark themes, including its hover and keyboard focus states.
+- Check recent movement cards and table in light and dark themes, including hover and keyboard focus states.
 - Follow repository quality gates for automated checks; report checks that were not run.

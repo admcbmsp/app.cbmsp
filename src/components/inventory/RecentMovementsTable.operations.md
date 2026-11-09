@@ -4,7 +4,7 @@ Implementation: [`RecentMovementsTable.tsx`](./RecentMovementsTable.tsx)
 
 ## Purpose and boundary
 
-Render a compact, readable table of recent inventory history events. The component receives already-filtered, already-sorted movement rows and only presents them. It does not fetch history, decide which records a user may see, or define authorization rules.
+Render recent inventory history events as compact cards below 1280 px and as a table at wider sizes. The component receives already-filtered, already-sorted movement rows and only presents them. It does not fetch history, decide which records a user may see, or define authorization rules.
 
 ## Contract and consumer
 
@@ -31,17 +31,17 @@ Condition and operational-status changes remain `edited` events and their summar
 
 ## Behavior and states
 
-- Rows are keyboard-focusable and activate on Enter or Space as well as pointer click.
+- Cards are native buttons; desktop rows activate on pointer click, Enter, or Space.
 - `DashboardPage` opens the edit flow for a pending item when the current user is an administrator; otherwise it opens that item's history.
-- When there are no events, the shared table keeps its column headings and shows **Nenhuma movimentação registrada.** in its body.
+- When there are no events, both layouts show **Nenhuma movimentação registrada.**
 - The component does not paginate; the dashboard limits the list to six rows.
 
 ## UI and accessibility
 
-- Compose the shared [`DynamicDataTable`](../DynamicDataTable.operations.md) with fixed columns **Item**, **Ação**, **Data**, and **Responsável**. The action cell also includes the event summary.
-- Keep the table directly on the page, without a card border, background panel, shadow, avatar, or decorative image.
-- Use the same column rendering, row activation, horizontal scrolling, border, row-background hover, and focus behavior as the inventory tables. Hover does not change text colors; the action summary and item number keep their semantic muted text colors.
-- Use `<time dateTime>` with the source timestamp and a readable localized date.
+- Below 1280 px, show labeled, keyboard-accessible cards. Each card includes the item and asset number, action and summary, event date, and responsible user.
+- At 1280 px and wider, compose the shared [`DynamicDataTable`](../DynamicDataTable.operations.md) with fixed columns **Item**, **Ação**, **Data**, and **Responsável**. The action cell also includes the event summary.
+- Keep the desktop table directly on the page, without a decorative card, shadow, avatar, or image. Preserve its horizontal scrolling, row hover, and focus behavior.
+- Use `<time dateTime>` with the source timestamp and a readable localized date in both layouts.
 
 ## Dependencies and side effects
 
@@ -56,5 +56,5 @@ Uses `InventoryItem`, `InventoryHistoryEntry`, the shared action labels, `format
 ## Verification
 
 - Check all action labels, summaries, timestamps, and responsible names in light and dark themes.
-- Check row click, Enter, and Space activation, the empty state, and horizontal scrolling at compact widths.
+- Check card and table activation, Enter and Space behavior, the empty state, and the 1280 px responsive switch.
 - Follow repository quality gates for automated checks; report checks that were not run.
