@@ -37,7 +37,7 @@ test('opens the saved views as a bottom drawer on mobile', async () => {
   setViewportWidth(375);
   renderTemplates();
 
-  fireEvent.click(screen.getByRole('button', { name: /modelos/i }));
+  fireEvent.click(screen.getByRole('button', { name: /layout/i }));
 
   const dialog = await screen.findByRole('dialog', { name: 'Modelos salvos' });
   await screen.findByText('Nenhum template salvo ainda.');
@@ -54,7 +54,7 @@ test('keeps the saved views as a popover above the mobile breakpoint', async () 
   setViewportWidth(768);
   renderTemplates();
 
-  fireEvent.click(screen.getByRole('button', { name: /modelos/i }));
+  fireEvent.click(screen.getByRole('button', { name: /layout/i }));
 
   const dialog = await screen.findByRole('dialog', { name: 'Templates de filtros e colunas' });
   await screen.findByText('Nenhum template salvo ainda.');

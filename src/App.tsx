@@ -4,6 +4,7 @@ import {
   ReactNode,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { Icon } from './components/Icon';
@@ -574,6 +575,7 @@ function InventoryPage({
   const [stateFilters, setStateFilters] = useState<ItemState[]>(() => initialFilter?.states ?? []);
   const [operationalStatusFilters, setOperationalStatusFilters] = useState<OperationalStatus[]>(() => initialFilter?.operationalStatuses ?? []);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const searchSuggestionsRef = useRef<HTMLDivElement>(null);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<InventoryColumnKey[]>(defaultInventoryColumns);
   const [visibleGroupColumns, setVisibleGroupColumns] = useState<InventoryGroupColumnKey[]>([...defaultInventoryGroupColumns]);
@@ -588,6 +590,37 @@ function InventoryPage({
     setStateFilters(initialFilter?.states ?? []);
     setOperationalStatusFilters(initialFilter?.operationalStatuses ?? []);
   }, [initialFilter?.query, initialFilter?.types, initialFilter?.statuses, initialFilter?.states, initialFilter?.operationalStatuses]);
+
+  useEffect(() => {
+    if (!suggestionsOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!searchSuggestionsRef.current?.contains(event.target as Node)) {
+        setSuggestionsOpen(false);
+      }
+    };
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!searchSuggestionsRef.current?.contains(event.target as Node)) {
+        setSuggestionsOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSuggestionsOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [suggestionsOpen]);
 
   const visibleItems = useMemo(() => visibleItemsForRole(items, user.role), [items, user.role]);
   const availableTypes = useMemo(() => Array.from(new Set(visibleItems.map((item) => item.type))).sort(), [visibleItems]);
@@ -732,12 +765,11 @@ function InventoryPage({
             type="button"
             variant="secondary"
             aria-label="Exportar PDF"
+            title="Exportar PDF"
             onClick={() => selectedDescription === null ? exportGroups() : onExportCurrent(detailItems, visibleColumns)}
             disabled={displayedItems.length === 0}
           >
             <Icon name="download" className="h-4 w-4" aria-hidden="true" />
-            <span className="sm:hidden" aria-hidden="true">PDF</span>
-            <span className="hidden sm:inline" aria-hidden="true">Exportar PDF</span>
           </Button>
           <InventoryViewTemplates userId={user.id} autoApplyDefaultOnEntry={autoApplyDefaultOnEntry} filters={currentFilters} columns={visibleColumns} groupColumns={visibleGroupColumns} onApply={applySavedView} onToast={onToast} />
           {canCreateItems(user.role) && (
@@ -754,7 +786,7 @@ function InventoryPage({
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <div className="min-w-0 flex-1">
               <label htmlFor="inventory-search" className="sr-only">Descrição ou patrimônio</label>
-              <div className="relative">
+              <div ref={searchSuggestionsRef} className="relative">
                 <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <TextInput id="inventory-search" value={query} onChange={(event) => handleQueryChange(event.target.value)} onFocus={() => setSuggestionsOpen(query.trim().length >= 3)} placeholder="Ex.: mangueira, CBM-VTR-0001..." className="!h-10 pl-10" />
                 {suggestionsOpen && suggestions.length > 0 && (
@@ -776,13 +808,14 @@ function InventoryPage({
             </div>
             <button
               type="button"
+              aria-label={activeFilterCount > 0 ? `Filtros, ${activeFilterCount} grupos ativos` : 'Filtros'}
+              title="Filtros"
               aria-expanded={filtersExpanded}
               aria-controls="inventory-filter-controls"
               onClick={() => setFiltersExpanded((expanded) => !expanded)}
               className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-sm font-medium text-slate-700 sm:hidden ${COLOR_TRANSITION_CLASS} ${activeFilterCount ? 'border-primary bg-[var(--color-hover)] text-primary' : 'border-slate-200 bg-white'}`}
             >
-              <Icon name="filter" className="h-4 w-4" />
-              Filtros
+              <Icon name="filter" className="h-4 w-4" aria-hidden="true" />
               {activeFilterCount > 0 && <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 text-white">{activeFilterCount}</span>}
             </button>
           </div>
@@ -907,6 +940,24 @@ function HistoryDrawer({
   item: InventoryItem | null;
   onClose: () => void;
 }) {
+  const isOpen = item !== null;
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousRootOverflow;
+    };
+  }, [isOpen]);
+
   if (!item) {
     return null;
   }
@@ -926,7 +977,7 @@ function HistoryDrawer({
           </div>
           <IconButton label="Fechar histórico" onClick={onClose} className="shrink-0"><Icon name="close" className="h-5 w-5" /></IconButton>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge kind={BadgeKind.Status} value={item.status} />
             <StatusBadge kind={BadgeKind.State} value={item.state} />

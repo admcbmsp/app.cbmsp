@@ -68,7 +68,6 @@ export function FilterDropdown({ id, label, options, selectedValues, onChange }:
         onClick={() => setIsOpen((current) => !current)}
         className={`inline-flex h-10 max-w-64 items-center gap-2 rounded-md border px-3 text-sm font-medium ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedValues.length ? 'border-primary bg-[var(--color-hover)] text-primary' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
       >
-        <Icon name="filter" className="h-4 w-4 shrink-0" />
         <span className="truncate">{label}{selectionSummary}</span>
         <Icon name="chevron-down" className="h-3.5 w-3.5 shrink-0 text-slate-400" />
       </button>

@@ -14,8 +14,8 @@ Let a signed-in user search and filter visible assets, view grouped totals or in
 
 ## Layout and behavior
 
-- Page-level actions are placed beside **Modelos** and **Novo item**: **Exportar PDF**, templates, and item creation (when permitted). Export uses the grouped report in grouped view and the selected description's individual items in detail view. It is disabled when the displayed view has no records.
-- Search and filter controls sit directly on the page without a surrounding card. Below 640 px, search stays visible while filter controls collapse behind an accessible **Filtros** toggle; active filter groups are counted on the toggle. At wider widths, filters remain expanded. In grouped view, the **Colunas** control sits with the filters; **Limpar**, when available, is last on the right. In individual-item detail view, the filters are hidden and the **Colunas** control sits beside the results heading.
+- Page-level actions are placed beside **Layout** and **Novo item**: icon-only PDF export, saved layouts, and item creation (when permitted). Export uses the grouped report in grouped view and the selected description's individual items in detail view. It is disabled when the displayed view has no records.
+- Search and filter controls sit directly on the page without a surrounding card. Below 640 px, search stays visible while filter controls collapse behind an icon-only, accessible filter toggle; active filter groups are counted on the toggle. At wider widths, filters remain expanded. In grouped view, the **Colunas** control sits with the filters; **Limpar**, when available, is last on the right. In individual-item detail view, the filters are hidden and the **Colunas** control sits beside the results heading.
 - The grouped table defaults to the required **Item** column plus **Total** and **Operacional**. Other status-breakdown columns remain available through **Colunas** but start hidden. Grouped and individual column selections are controlled by `visibleGroupColumns` and `visibleColumns`; both configurations are captured in, restored from, and updated in templates.
 - The inventory heading is compact on phones: its helper description and eyebrow are omitted below 640 px, while the result summary keeps the key counts in a shorter form.
 - Table data columns default to centered alignment; the long **Item** and **Descrição do cadastro** columns explicitly use logical `start` alignment. Other columns can override alignment through their column definitions.
@@ -30,6 +30,8 @@ Let a signed-in user search and filter visible assets, view grouped totals or in
 - Keep search and filters unboxed. Place the grouped table's column control with the filters and **Limpar** last on the right. Place the individual table's column control beside its results heading.
 - Keep the results heading outside the result cards or bordered table and the pagination controls in a separate unboxed row below the results.
 - Search and filters must retain labels, keyboard access, visible focus, and the responsive behavior required by CR-10.
+- Open description suggestions for search queries of at least three characters; close them when the user clicks or moves focus outside the search area, or presses Escape. Interactions inside the suggestion list remain available for selection.
+- The history drawer locks document scrolling while open; its content area scrolls independently.
 
 ## Data and service dependencies
 

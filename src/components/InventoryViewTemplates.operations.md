@@ -23,9 +23,10 @@ Let a user save, apply, update, rename, delete, and choose a default for their l
 
 ## UI and accessibility
 
-- The **Modelos** trigger opens a dialog-style panel. Escape closes it and returns focus to the trigger; clicking outside closes the panel.
+- The **Layout** trigger opens a dialog-style panel with a dashboard icon. Escape closes it and returns focus to the trigger; clicking outside closes the panel.
 - The save and rename fields have labels and validation feedback. Destructive deletion requires an inline confirmation.
 - The saved-template summary shows counts for grouped and individual columns separately.
+- The delete confirmation uses the semantic error surface, text, and border tokens so its colors remain balanced in both light and dark themes.
 
 ## Data and service dependencies
 

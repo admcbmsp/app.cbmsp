@@ -35,6 +35,7 @@ Render a generic table from consumer-supplied rows and cell renderers. Optional 
 ## UI and accessibility
 
 - Below 1280 px, rows appear as labeled cards while table and cell semantics remain available to assistive technology. The `summary-chips` layout applies below 640 px and renders each non-heading data column as its own flat chip. At wider sizes, the content-sized table scrolls horizontally inside its bordered wrapper. When any visible column is sortable, the labeled sort control is available above the results.
+- The compact sort direction control displays **Cres** or **Desc**; its accessible label spells out the current direction.
 - The table border encloses only the desktop table. The results heading and any consumer-placed column control remain outside it; the default column control is rendered as a simple standalone control before the results, without a padded toolbar or sort instruction.
 - When pagination is enabled, its footer follows the table as an unboxed row with a small gap. It is visually detached from the table border.
 - Apply each column's alignment consistently to its header and body cell. Keep column content and headings aligned while the table scrolls.
@@ -42,7 +43,7 @@ Render a generic table from consumer-supplied rows and cell renderers. Optional 
 - Row hover changes the row background to the muted-surface token; cell text keeps its normal foreground or muted color. The sticky actions cell follows the same background state. Consumer cell renderers should not add row-hover text color changes.
 - When pagination is enabled, expose the page-size select, result range, current page, and previous/next controls with accessible names.
 - Keep control labels, focus treatment, required-column indication, and action-menu accessible names clear. Preserve keyboard operation when changing the picker placement.
-- The picker menu is positioned relative to its own trigger. If it is portaled, the consumer-provided host determines its placement in the surrounding layout.
+- The picker menu is positioned relative to its own trigger and clamped to the viewport's horizontal edges. If it is portaled, the consumer-provided host determines its placement in the surrounding layout.
 
 ## Data, services, and side effects
 

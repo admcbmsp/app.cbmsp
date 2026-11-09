@@ -79,6 +79,7 @@ export function DynamicDataTable<T, Key extends string = string>({
 }: DynamicDataTableProps<T, Key>) {
   const [sort, setSort] = useState<SortState<Key>>(null);
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+  const [columnMenuLeft, setColumnMenuLeft] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<PaginationPageSize>(10);
   const mobileSortId = useId();
@@ -183,6 +184,25 @@ export function DynamicDataTable<T, Key extends string = string>({
     onVisibleColumnKeysChange([...lockedKeys.filter((key) => !defaults.includes(key)), ...defaults]);
   };
 
+  const toggleColumnMenu = () => {
+    if (columnMenuOpen) {
+      setColumnMenuOpen(false);
+      return;
+    }
+
+    const triggerRect = triggerRef.current?.getBoundingClientRect();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (triggerRect && containerRect) {
+      const viewportPadding = 8;
+      const menuWidth = Math.min(256, Math.max(0, window.innerWidth - viewportPadding * 2));
+      const maxLeft = Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding);
+      const left = Math.max(viewportPadding, Math.min(triggerRect.left, maxLeft));
+      setColumnMenuLeft(left - containerRect.left);
+    }
+
+    setColumnMenuOpen(true);
+  };
+
   const columnControl = (
     <div ref={containerRef} className="relative">
       <button
@@ -191,15 +211,14 @@ export function DynamicDataTable<T, Key extends string = string>({
         aria-label="Configurar colunas"
         aria-expanded={columnMenuOpen}
         aria-haspopup="true"
-        onClick={() => setColumnMenuOpen((current) => !current)}
+        onClick={toggleColumnMenu}
         className={`inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${columnMenuOpen ? 'border-primary bg-[var(--color-hover)] text-primary' : 'border-line bg-card text-foreground hover:bg-muted/50'}`}
       >
-        <Icon name="columns" className="h-4 w-4" />
         Colunas
         <span className="text-xs text-muted-foreground">{visibleColumns.length}/{columns.length}</span>
       </button>
       {columnMenuOpen && (
-        <div role="group" aria-label="Colunas da tabela" className="absolute left-0 top-[calc(100%+0.5rem)] z-50 flex max-h-[min(22rem,calc(100vh-8rem))] w-64 flex-col overflow-hidden rounded-md border border-line bg-card shadow-xl shadow-slate-900/10">
+        <div role="group" aria-label="Colunas da tabela" style={{ left: columnMenuLeft }} className="absolute top-[calc(100%+0.5rem)] z-50 flex max-h-[min(22rem,calc(100vh-8rem))] w-64 max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-md border border-line bg-card shadow-xl shadow-slate-900/10">
           <div className="flex items-baseline gap-2 border-b border-line px-3 py-2">
             <span className="text-xs font-semibold text-foreground">Colunas</span>
             <span className="text-xs text-muted-foreground">{visibleColumns.length}/{columns.length}</span>
@@ -277,7 +296,7 @@ export function DynamicDataTable<T, Key extends string = string>({
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-line bg-card px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Icon name={sort?.direction === 'desc' ? 'arrow-down' : 'arrow-up'} className="h-4 w-4" />
-            {sortedColumn && sort?.direction === 'desc' ? 'Decrescente' : 'Crescente'}
+            {sortedColumn && sort?.direction === 'desc' ? 'Desc' : 'Cres'}
           </button>
         </div>
       )}

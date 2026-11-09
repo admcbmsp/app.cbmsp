@@ -293,14 +293,14 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
                     {defaultTemplateId !== template.id && <button type="button" disabled={busyId === template.id} onClick={() => setAsDefault(template)} className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">Definir padrão</button>}
                     <button type="button" disabled={busyId === template.id} onClick={() => updateTemplate(template)} className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">Atualizar</button>
                     <button type="button" onClick={() => { setRenamingId(template.id); setRenameValue(template.name); setFormError(''); setShowSaveForm(false); }} className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100">Renomear</button>
-                    <button type="button" onClick={() => setDeleteConfirmationId(template.id)} className="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50">Excluir</button>
+                    <button type="button" onClick={() => setDeleteConfirmationId(template.id)} className="rounded-md px-2 py-1 text-xs font-medium text-error hover:bg-error-soft">Excluir</button>
                   </div>
                   {deleteConfirmationId === template.id && (
-                    <div className="mt-2 rounded-md bg-rose-50 p-2.5">
-                      <p className="text-xs text-rose-800">Excluir “{template.name}”?</p>
+                    <div className="mt-2 rounded-md border border-border bg-error-soft p-2.5">
+                      <p className="text-xs text-error">Excluir “{template.name}”?</p>
                       <div className="mt-2 flex justify-end gap-2">
-                        <button type="button" onClick={() => setDeleteConfirmationId(null)} className="rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-white">Cancelar</button>
-                        <button type="button" disabled={busyId === template.id} onClick={() => removeTemplate(template)} className="rounded-md bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50">Confirmar exclusão</button>
+                        <button type="button" onClick={() => setDeleteConfirmationId(null)} className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-surface-muted">Cancelar</button>
+                        <button type="button" disabled={busyId === template.id} onClick={() => removeTemplate(template)} className="rounded-md border border-error bg-error-soft px-2.5 py-1 text-xs font-semibold text-error hover:opacity-80 disabled:opacity-50">Confirmar exclusão</button>
                       </div>
                     </div>
                   )}
@@ -323,8 +323,8 @@ export function InventoryViewTemplates({ userId, autoApplyDefaultOnEntry, filter
         onClick={() => setIsOpen((current) => !current)}
         className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium ${COLOR_TRANSITION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isOpen ? 'border-primary bg-[var(--color-hover)] text-primary' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
       >
-        <Icon name="archive" className="h-4 w-4" />
-        <span>Modelos</span>
+        <Icon name="dashboard" className="h-4 w-4" />
+        <span>Layout</span>
         {templates.length > 0 && <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{templates.length}</span>}
       </button>
 
