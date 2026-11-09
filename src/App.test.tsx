@@ -202,6 +202,51 @@ test('gestor approves a pending item and it becomes visible to the reader', asyn
   expect(screen.getAllByText('Motosserra aprovada').length).toBeGreaterThan(0);
 });
 
+test('approves a single patrimony when multiple pending items share a description', async () => {
+  render(<App />);
+  loginAs(/rafael almeida/i);
+
+  const description = 'Motosserra por patrimônio individual';
+  const createPendingItem = async (value: string, patrimonyNumber: string) => {
+    fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
+    fireEvent.change(screen.getByLabelText(/descrição do item/i), { target: { value: description } });
+    fireEvent.change(screen.getByLabelText(/número de patrimônio/i), { target: { value: patrimonyNumber } });
+    fireEvent.change(screen.getByLabelText(/valor unitário/i), { target: { value } });
+    fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
+    await screen.findByText('Novo item criado como pendente.');
+  };
+
+  await createPendingItem('1000', 'CBM-TEST-001');
+  await createPendingItem('1200', 'CBM-TEST-002');
+
+  logoutFromSideNav();
+  loginAs(/eduardo santos/i);
+  const pendingItemButtons = screen.getAllByRole('button', { name: new RegExp(`Editar item pendente: ${description}, (.+)`) });
+  expect(pendingItemButtons).toHaveLength(2);
+  const patrimonyNumbers = pendingItemButtons.map((button) => button.getAttribute('aria-label')!.split(', ').pop()!);
+  expect(patrimonyNumbers).toEqual(expect.arrayContaining(['CBM-TEST-001', 'CBM-TEST-002']));
+  await openInventory();
+  fireEvent.change(screen.getByLabelText(/descrição ou patrimônio/i), { target: { value: description } });
+
+  const groupTable = screen.getByRole('table', { name: 'Patrimônios por descrição' });
+  fireEvent.click(within(groupTable).getByRole('row', { name: `Abrir patrimônios de ${description}` }));
+
+  const detailTable = screen.getByRole('table', { name: 'Detalhes individuais dos patrimônios' });
+  const [approvedItemActionLabel, stillPendingItemActionLabel] = patrimonyNumbers.map(
+    (number) => `Ações para ${description}, ${number}`,
+  );
+
+  fireEvent.click(within(detailTable).getByRole('button', { name: approvedItemActionLabel }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Aprovar item' }));
+
+  fireEvent.click(screen.getByRole('button', { name: approvedItemActionLabel }));
+  expect(screen.queryByRole('menuitem', { name: 'Aprovar item' })).not.toBeInTheDocument();
+  fireEvent.keyDown(document, { key: 'Escape' });
+
+  fireEvent.click(screen.getByRole('button', { name: stillPendingItemActionLabel }));
+  expect(screen.getByRole('menuitem', { name: 'Aprovar item' })).toBeInTheDocument();
+});
+
 test('gestor can reject a pending item and reader cannot consult it', async () => {
   render(<App />);
   loginAs(/rafael almeida/i);

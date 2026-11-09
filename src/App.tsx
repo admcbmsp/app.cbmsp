@@ -1510,7 +1510,7 @@ function App() {
     }
 
     setItems((currentItems) => currentItems.map((currentItem) => {
-      if (currentItem.status !== 'pending' || (selectedUnit !== null && currentItem.cidade !== selectedUnit) || (nextStatus === 'active' ? descriptionKey(currentItem.description) !== descriptionKey(item.description) : currentItem.uuid !== item.uuid)) {
+      if (currentItem.uuid !== item.uuid || currentItem.status !== 'pending' || (selectedUnit !== null && currentItem.cidade !== selectedUnit)) {
         return currentItem;
       }
 
