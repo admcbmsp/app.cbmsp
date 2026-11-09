@@ -72,7 +72,6 @@ import type { InventoryColumnKey } from './services/inventoryReports';
 import { normalizeInventoryFilters } from './services/savedInventoryViews';
 import { createReportHtml } from './services/reportHtml';
 import { openPrintReport } from './services/printReport';
-import { MAX_REJECTION_REASON_LENGTH, rejectInventoryItem } from './services/inventoryApi';
 import { applyTheme, getInitialTheme, ThemeMode } from './theme/theme';
 import { COLOR_TRANSITION_CLASS } from './theme/motion';
 import { defaultInventoryGroupColumns } from './types/inventoryViews';
@@ -110,6 +109,8 @@ const itemTypeOptions = [
   'comunicacao',
   'infraestrutura',
 ];
+
+const MAX_REJECTION_REASON_LENGTH = 281;
 
 const normalizeSearchText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -1213,7 +1214,7 @@ function RejectItemDialog({
 }: {
   item: InventoryItem;
   onClose: () => void;
-  onSubmit: (reason: string) => Promise<void>;
+  onSubmit: (reason: string) => Promise<void> | void;
 }) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
@@ -1532,17 +1533,13 @@ function App() {
     updateAppRouteUrl(routePage, nextFilter, true, selectedUnit, routePage === 'details' ? selectedDescription : null);
   };
 
-  const handleSaveItem = async (values: InventoryFormValues, rejectionReason: string) => {
+  const handleSaveItem = (values: InventoryFormValues, rejectionReason: string) => {
     if (!session || !modal) {
       return;
     }
 
     if (modal.mode === 'edit') {
       const rejectionTransition = session.role === 'adm' && modal.item.status !== 'rejected' && values.status === 'rejected';
-      if (rejectionTransition) {
-        await rejectInventoryItem(modal.item.uuid, rejectionReason);
-      }
-
       setItems((currentItems) => currentItems.map((currentItem) => {
           if (currentItem.uuid !== modal.item.uuid) {
             return currentItem;
@@ -1651,12 +1648,10 @@ function App() {
     setToast({ message: 'Patrimônio aprovado e liberado para consulta.', tone: 'success' });
   };
 
-  const handleRejectItem = async (item: InventoryItem, reason: string) => {
+  const handleRejectItem = (item: InventoryItem, reason: string) => {
     if (!session || session.role !== 'adm' || item.status !== 'pending') {
       throw new Error('Este patrimônio não está mais pendente de aprovação.');
     }
-
-    await rejectInventoryItem(item.uuid, reason);
 
     setItems((currentItems) => currentItems.map((currentItem) => {
       if (currentItem.uuid !== item.uuid || currentItem.status !== 'pending' || (selectedUnit !== null && currentItem.cidade !== selectedUnit)) {

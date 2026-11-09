@@ -18,7 +18,7 @@ Todos os usuários usam a senha `123456`:
 - `almoxarife@cbmsp.test` — consulta, cria itens pendentes e edita quantidade, condição operacional e cidade/unidade.
 - `adm@cbmsp.test` — aprova/rejeita pendências, cria itens ativos e controla os status.
 
-Cadastros e edições do protótipo ficam na memória do navegador e são perdidos ao recarregar a página. A rejeição chama `POST /api/v1/items/{id}/reject` e só atualiza o item na tela após sucesso. Se a API estiver em outra origem, defina `REACT_APP_API_BASE_URL`; as chamadas enviam os cookies de sessão existentes. O login demonstrativo não cria uma sessão autenticada no backend.
+Todas as alterações do protótipo, incluindo aprovações e rejeições, ficam na memória do navegador e são perdidas ao recarregar a página.
 
 ## Scripts disponíveis
 

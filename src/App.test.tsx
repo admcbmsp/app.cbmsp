@@ -2,18 +2,11 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import App from './App';
 import { inventorySeed } from './data/inventory';
 import { patrimonioSalvamentoNumbers } from './data/patrimonySalvamento';
-import { rejectInventoryItem } from './services/inventoryApi';
 import { City, itemStatuses, operationalStatuses, operationalStatusLabels, statusLabels } from './types/inventory';
 import { formatCurrency } from './utils/inventory';
 import { parseAppRoute } from './utils/appRouting';
 
-jest.mock('./services/inventoryApi', () => ({ rejectInventoryItem: jest.fn() }));
-
-const mockRejectInventoryItem = rejectInventoryItem as jest.MockedFunction<typeof rejectInventoryItem>;
-
 beforeEach(() => {
-  mockRejectInventoryItem.mockReset();
-  mockRejectInventoryItem.mockResolvedValue(undefined);
   window.history.replaceState(window.history.state, '', '#/dashboard');
   window.localStorage.removeItem('cbmsp-theme');
   document.documentElement.classList.remove('dark');
@@ -269,11 +262,10 @@ test('gestor can reject a pending item and reader cannot consult it', async () =
   const reasonField = screen.getByLabelText(/motivo da rejeição/i);
   expect(reasonField).toBeRequired();
   fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
-  expect(mockRejectInventoryItem).not.toHaveBeenCalled();
+  expect(screen.getByRole('dialog', { name: 'Editar registro' })).toBeInTheDocument();
 
   fireEvent.change(reasonField, { target: { value: 'Cadastro incompleto.' } });
   fireEvent.click(screen.getByRole('button', { name: /salvar registro/i }));
-  await waitFor(() => expect(mockRejectInventoryItem).toHaveBeenCalledWith(expect.any(String), 'Cadastro incompleto.'));
   expect(await screen.findByText(/patrimônio rejeitado; motivo registrado/i)).toBeInTheDocument();
 
   logoutFromSideNav();
@@ -284,7 +276,7 @@ test('gestor can reject a pending item and reader cannot consult it', async () =
   expect(screen.queryByText('Motosserra rejeitada')).not.toBeInTheDocument();
 });
 
-test('asks for a reason and calls the rejection endpoint from the inventory action menu', async () => {
+test('asks for a reason and rejects only the selected item from the inventory action menu', async () => {
   render(<App />);
   loginAs(/rafael almeida/i);
   fireEvent.click(screen.getByRole('button', { name: /novo item/i }));
@@ -310,21 +302,16 @@ test('asks for a reason and calls the rejection endpoint from the inventory acti
   const reasonField = within(dialog).getByLabelText(/motivo da rejeição/i);
   expect(reasonField).toBeRequired();
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar rejeição' }));
-  expect(mockRejectInventoryItem).not.toHaveBeenCalled();
-
-  fireEvent.change(reasonField, { target: { value: 'Número patrimonial inválido.' } });
-  mockRejectInventoryItem.mockRejectedValueOnce(new Error('Falha temporária da API.'));
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar rejeição' }));
-  await waitFor(() => expect(within(dialog).getByRole('alert')).toHaveTextContent('Falha temporária da API.'));
-  expect(mockRejectInventoryItem).toHaveBeenCalledTimes(1);
   expect(dialog).toBeInTheDocument();
 
+  fireEvent.change(reasonField, { target: { value: 'Número patrimonial inválido.' } });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar rejeição' }));
-  await waitFor(() => expect(mockRejectInventoryItem).toHaveBeenCalledWith(expect.any(String), 'Número patrimonial inválido.'));
   expect(await screen.findByText(/patrimônio rejeitado; motivo registrado/i)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: actionLabel }));
   expect(screen.queryByRole('menuitem', { name: 'Rejeitar item' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Ver histórico' }));
+  expect(screen.getByText('MOTIVO DA REJEIÇÃO: Número patrimonial inválido.')).toBeInTheDocument();
 });
 
 test('inventory offers history, operational status filtering and configurable columns', async () => {
