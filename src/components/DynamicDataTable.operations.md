@@ -17,6 +17,7 @@ Render a generic table from consumer-supplied rows and cell renderers. Optional 
 - Example: set `align: 'start'` on a long description column; leave counts and status columns unset to use the centered default.
 - The column visibility list is controlled by the consumer when the picker is enabled. The component reports changes through `onVisibleColumnKeysChange` and does not persist them itself.
 - `pagination` defaults to `true`. Set it to `false` to render all rows without a page-size control or footer. `emptyState` supplies optional content for a zero-row table.
+- `mobileCardLayout` selects the compact row presentation below 640 px. The default `list` layout shows one labeled field per row; `grid` places fields in a two-column card; `detail-grid` also reserves its first row for the patrimony number and row actions.
 - `columnControlTarget` controls where the column picker is rendered: omitted (`undefined`) means render it as a standalone control before the table; an `HTMLDivElement` renders it into that host with a React portal; `null` means an external host is expected but not ready, so the picker is temporarily not rendered. A consumer using an external host must keep it mounted while the table needs the control.
 
 ## Behavior and states
@@ -26,17 +27,18 @@ Render a generic table from consumer-supplied rows and cell renderers. Optional 
 - Clicking outside the picker closes it. Escape closes it and returns focus to the picker trigger.
 - Activating a sortable table heading cycles ascending, descending, then unsorted. On compact layouts, the sort select and direction control provide the equivalent interaction.
 - Rows are sorted before pagination. The table starts at 10 rows per page and offers 10, 25, and 50. Changing the source rows or page size returns to page 1; page navigation is bounded by the current result count.
+- Empty result sets keep their empty state and column controls but omit sorting and pagination controls.
 - The footer's range and page count describe table rows (descriptions in grouped view, individual assets in detail view), not the underlying asset totals.
 - A row can be activated with Enter or Space when `onRowClick` is supplied; interactive controls inside the row do not trigger row activation.
 - Per-row actions appear only when `getActions` is supplied; permission checks and business rules must be applied by the consumer and, in production, by the server.
 
 ## UI and accessibility
 
-- At compact widths, the table retains its headings and rows and scrolls horizontally inside its bordered wrapper. The table uses its content-driven width with a 100% minimum, so columns stay wide enough for their content. When any visible column is sortable, the labeled sort control is available above it.
-- The table border encloses only the horizontally scrollable table. The results heading and any consumer-placed column control remain outside it; the default column control is rendered as a simple standalone control before the table, without a padded toolbar or sort instruction.
+- Below 1280 px, rows appear as labeled cards while table and cell semantics remain available to assistive technology. At wider sizes, the content-sized table scrolls horizontally inside its bordered wrapper. When any visible column is sortable, the labeled sort control is available above the results.
+- The table border encloses only the desktop table. The results heading and any consumer-placed column control remain outside it; the default column control is rendered as a simple standalone control before the results, without a padded toolbar or sort instruction.
 - When pagination is enabled, its footer follows the table as an unboxed row with a small gap. It is visually detached from the table border.
 - Apply each column's alignment consistently to its header and body cell. Keep column content and headings aligned while the table scrolls.
-- Keep row dividers and the theme border around the scroll container consistent at all widths. The actions column becomes sticky only at wide breakpoints so it does not cover content while narrow tables scroll.
+- Keep row dividers and theme borders consistent. The actions column becomes sticky only at wide breakpoints, so it does not cover content on compact cards.
 - Row hover changes the row background to the muted-surface token; cell text keeps its normal foreground or muted color. The sticky actions cell follows the same background state. Consumer cell renderers should not add row-hover text color changes.
 - When pagination is enabled, expose the page-size select, result range, current page, and previous/next controls with accessible names.
 - Keep control labels, focus treatment, required-column indication, and action-menu accessible names clear. Preserve keyboard operation when changing the picker placement.

@@ -21,3 +21,153 @@ code {
     border-left: 1px solid var(--color-border);
   }
 }
+
+@media (max-width: 1279px) {
+  .data-table-scroll {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .data-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .data-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .data-table thead th > button {
+    display: none;
+  }
+
+  .data-table tbody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .data-table tbody > tr {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    background: var(--color-surface);
+  }
+
+  .data-table tbody > tr.group:hover {
+    background: var(--color-surface-muted);
+  }
+
+  .data-table tbody > tr > td {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 0;
+    text-align: left;
+  }
+
+  .data-table tbody > tr > td + td {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .data-table tbody > tr > td::before {
+    content: attr(data-label);
+    flex: 0 0 min(42%, 10rem);
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    overflow-wrap: anywhere;
+  }
+
+  .data-table tbody > tr > td:not([data-label])::before {
+    content: none;
+  }
+
+  .data-table tbody > tr > td > [data-cell-content] {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: flex-start;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  .data-table tbody > tr > td[colspan] > [data-cell-content] {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .data-table tbody > tr > td[data-row-actions] > [data-cell-content] {
+    justify-content: flex-end;
+  }
+
+}
+
+@media (max-width: 639px) {
+  .data-table--grid tbody > tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 0.5rem;
+    row-gap: 0;
+    padding: 0.25rem;
+  }
+
+  .data-table--grid tbody > tr > td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border: 0;
+  }
+
+  .data-table--grid tbody > tr > td + td {
+    border-top: 0;
+  }
+
+  .data-table--grid tbody > tr > td::before {
+    flex: 0 0 auto;
+    font-size: 0.6875rem;
+    line-height: 1rem;
+  }
+
+  .data-table--grid tbody > tr > td > [data-cell-content] {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .data-table--detail-grid tbody > tr > td[data-label="Número de patrimônio"] {
+    grid-row: 1;
+    grid-column: 1;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .data-table--detail-grid tbody > tr > td[data-row-actions] {
+    grid-row: 1;
+    grid-column: 2;
+    align-items: flex-end;
+    justify-content: center;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .data-table--detail-grid tbody > tr > td[data-row-actions]::before {
+    content: none;
+  }
+}
+

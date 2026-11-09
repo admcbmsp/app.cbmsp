@@ -596,6 +596,7 @@ function InventoryPage({
   const [stateFilters, setStateFilters] = useState<ItemState[]>(() => initialFilter?.states ?? []);
   const [operationalStatusFilters, setOperationalStatusFilters] = useState<OperationalStatus[]>(() => initialFilter?.operationalStatuses ?? []);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<InventoryColumnKey[]>(defaultInventoryColumns);
   const [visibleGroupColumns, setVisibleGroupColumns] = useState<InventoryGroupColumnKey[]>([...defaultInventoryGroupColumns]);
@@ -732,6 +733,7 @@ function InventoryPage({
   };
 
   const hasFilters = Boolean(query.trim() || typeFilters.length || statusFilters.length || stateFilters.length || operationalStatusFilters.length);
+  const activeFilterCount = [typeFilters, statusFilters, stateFilters, operationalStatusFilters].filter((values) => values.length > 0).length;
   const currentFilters = normalizeInventoryFilters({
     query,
     types: typeFilters,
@@ -764,22 +766,24 @@ function InventoryPage({
 
   return (
     <>
-      <section className="mb-7 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+      <section className="mb-3 flex flex-col justify-between gap-3 sm:mb-7 sm:gap-5 md:flex-row md:items-end">
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">Consulta de ativos</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{selectedDescription ?? (user.role === 'reader' ? 'Consulta de Ativos' : 'Controle de patrimônio')}</h1>
-          {selectedDescription !== null && <Button variant="ghost" onClick={() => onBackToInventory(currentFilters)} className="mt-3">Voltar ao estoque patrimonial</Button>}
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">{selectedDescription === null ? 'Consulte os totais por descrição e abra um item para ver seus patrimônios.' : `${detailItems.length} patrimônio(s) visível(is) neste cadastro. Cada número de patrimônio corresponde a uma unidade.`}</p>
+          <p className="mb-1 hidden text-xs font-bold uppercase tracking-[0.18em] text-primary sm:mb-2 sm:block">Consulta de ativos</p>
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">{selectedDescription ?? (user.role === 'reader' ? 'Consulta de Ativos' : 'Controle de patrimônio')}</h1>
+          {selectedDescription !== null && <Button variant="ghost" onClick={() => onBackToInventory(currentFilters)} className="mt-2 sm:mt-3">Voltar ao estoque patrimonial</Button>}
+          <p className="mt-3 hidden max-w-2xl text-sm leading-6 text-slate-500 sm:block">{selectedDescription === null ? 'Consulte os totais por descrição e abra um item para ver seus patrimônios.' : `${detailItems.length} patrimônio(s) visível(is) neste cadastro. Cada número de patrimônio corresponde a uma unidade.`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="secondary"
+            aria-label="Exportar PDF"
             onClick={() => selectedDescription === null ? exportGroups() : onExportCurrent(detailItems, visibleColumns)}
             disabled={displayedItems.length === 0}
           >
-            <Icon name="download" className="h-4 w-4" />
-            Exportar PDF
+            <Icon name="download" className="h-4 w-4" aria-hidden="true" />
+            <span className="sm:hidden" aria-hidden="true">PDF</span>
+            <span className="hidden sm:inline" aria-hidden="true">Exportar PDF</span>
           </Button>
           <InventoryViewTemplates userId={user.id} autoApplyDefaultOnEntry={autoApplyDefaultOnEntry} filters={currentFilters} columns={visibleColumns} groupColumns={visibleGroupColumns} onApply={applySavedView} onToast={onToast} />
           {canCreateItems(user.role) && (
@@ -792,30 +796,43 @@ function InventoryPage({
       </section>
 
       <section aria-label="Busca e filtros" hidden={selectedDescription !== null}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="min-w-0 flex-1">
-            <label htmlFor="inventory-search" className="sr-only">Descrição ou patrimônio</label>
-            <div className="relative">
-              <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <TextInput id="inventory-search" value={query} onChange={(event) => handleQueryChange(event.target.value)} onFocus={() => setSuggestionsOpen(query.trim().length >= 3)} placeholder="Ex.: mangueira, CBM-VTR-0001..." className="!h-10 pl-10" />
-              {suggestionsOpen && suggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-md border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
-                  <p className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Sugestões de descrição</p>
-                  <ul className="max-h-64 overflow-y-auto">
-                    {suggestions.map((suggestion) => (
-                      <li key={suggestion.description}>
-                        <button type="button" onClick={() => selectSuggestion(suggestion.description)} className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left ${COLOR_TRANSITION_CLASS} hover:bg-[var(--color-hover)]`}>
-                          <span className="min-w-0 truncate text-sm font-medium text-slate-700">{suggestion.description}</span>
-                          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">{suggestion.count} item(ns)</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="inventory-search" className="sr-only">Descrição ou patrimônio</label>
+              <div className="relative">
+                <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <TextInput id="inventory-search" value={query} onChange={(event) => handleQueryChange(event.target.value)} onFocus={() => setSuggestionsOpen(query.trim().length >= 3)} placeholder="Ex.: mangueira, CBM-VTR-0001..." className="!h-10 pl-10" />
+                {suggestionsOpen && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-md border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
+                    <p className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Sugestões de descrição</p>
+                    <ul className="max-h-64 overflow-y-auto">
+                      {suggestions.map((suggestion) => (
+                        <li key={suggestion.description}>
+                          <button type="button" onClick={() => selectSuggestion(suggestion.description)} className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left ${COLOR_TRANSITION_CLASS} hover:bg-[var(--color-hover)]`}>
+                            <span className="min-w-0 truncate text-sm font-medium text-slate-700">{suggestion.description}</span>
+                            <span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">{suggestion.count} item(ns)</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
+            <button
+              type="button"
+              aria-expanded={filtersExpanded}
+              aria-controls="inventory-filter-controls"
+              onClick={() => setFiltersExpanded((expanded) => !expanded)}
+              className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-sm font-medium text-slate-700 sm:hidden ${COLOR_TRANSITION_CLASS} ${activeFilterCount ? 'border-primary bg-[var(--color-hover)] text-primary' : 'border-slate-200 bg-white'}`}
+            >
+              <Icon name="filter" className="h-4 w-4" />
+              Filtros
+              {activeFilterCount > 0 && <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 text-white">{activeFilterCount}</span>}
+            </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div id="inventory-filter-controls" className={`${filtersExpanded ? 'flex' : 'hidden'} flex-wrap items-center gap-2 sm:flex`}>
             {selectedDescription === null && <div ref={setGroupColumnControlTarget} className="shrink-0" />}
             <FilterDropdown
               id="inventory-type-filter"
@@ -879,11 +896,14 @@ function InventoryPage({
         </section>
       )}
 
-      <section aria-label="Bens cadastrados" className="mt-5 min-w-0">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <section aria-label="Bens cadastrados" className="mt-3 min-w-0 sm:mt-5">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 sm:mb-3 sm:gap-3">
           <div>
             <h2 className="text-sm font-semibold text-slate-950">Bens cadastrados</h2>
-            <p className="mt-1 text-xs text-slate-500">{selectedDescription === null ? `${formatQuantity(groups.length)} descrição(ões) · ${formatQuantity(filteredItems.length)} patrimônio(s) filtrado(s) de ${formatQuantity(visibleItems.length)} visível(is).` : 'Detalhes individuais e histórico de movimentações'}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              <span className="sm:hidden">{selectedDescription === null ? `${formatQuantity(groups.length)} descr. · ${formatQuantity(filteredItems.length)} de ${formatQuantity(visibleItems.length)} itens` : 'Detalhes individuais e histórico'}</span>
+              <span className="hidden sm:inline">{selectedDescription === null ? `${formatQuantity(groups.length)} descrição(ões) · ${formatQuantity(filteredItems.length)} patrimônio(s) filtrado(s) de ${formatQuantity(visibleItems.length)} visível(is).` : 'Detalhes individuais e histórico de movimentações'}</span>
+            </p>
           </div>
           {selectedDescription === null ? (
             <Button
@@ -906,6 +926,7 @@ function InventoryPage({
             ariaLabel="Patrimônios por descrição"
             rows={groups}
             columns={inventoryGroupColumns}
+            mobileCardLayout="grid"
             visibleColumnKeys={visibleGroupColumns}
             defaultColumnKeys={defaultInventoryGroupColumns}
             onVisibleColumnKeysChange={setVisibleGroupColumns}
@@ -927,6 +948,7 @@ function InventoryPage({
               ariaLabel="Detalhes individuais dos patrimônios"
               rows={detailItems}
               columns={inventoryDetailColumns}
+              mobileCardLayout="detail-grid"
               visibleColumnKeys={visibleColumns}
               defaultColumnKeys={defaultInventoryColumns}
               onVisibleColumnKeysChange={setVisibleColumns}

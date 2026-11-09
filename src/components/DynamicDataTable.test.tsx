@@ -97,16 +97,61 @@ test('sorts rows by column value ascending, descending and back to source order'
   expect(getFirstDataRow()).toHaveTextContent('120');
 });
 
-test('keeps table headings visible inside a horizontally scrollable, content-sized table', () => {
+test('provides labeled cells for compact layouts while retaining accessible table headings', () => {
   renderTable();
   const table = screen.getByRole('table', { name: 'Tabela de teste' });
   const header = table.querySelector('thead');
 
-  expect(table.parentElement).toHaveClass('overflow-x-auto');
+  expect(table.parentElement).toHaveClass('data-table-scroll');
   expect(table).toHaveClass('w-max', 'min-w-full');
-  expect(header).not.toHaveClass('sr-only');
+  expect(header).toBeInTheDocument();
+  expect(within(table).getAllByRole('cell')[0]).toHaveAttribute('data-label', 'Patrimônio');
   expect(screen.getByRole('columnheader', { name: 'Patrimônio' })).toBeInTheDocument();
   expect(table.querySelectorAll('tbody tr')).toHaveLength(rows.length);
+});
+
+test('omits sort and pagination controls when the table has no rows', () => {
+  render(
+    <DynamicDataTable
+      ariaLabel="Tabela vazia"
+      rows={[]}
+      columns={columns}
+      getRowKey={(row) => row.id}
+      emptyState="Nenhum registro."
+    />,
+  );
+
+  expect(screen.getByText('Nenhum registro.')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Ordenar por')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Itens por página da Tabela vazia')).not.toBeInTheDocument();
+});
+
+test('supports a two-column compact card layout for detailed rows', () => {
+  render(
+    <DynamicDataTable
+      ariaLabel="Detalhes compactos"
+      rows={rows}
+      columns={columns}
+      getRowKey={(row) => row.id}
+      mobileCardLayout="grid"
+    />,
+  );
+
+  expect(screen.getByRole('table', { name: 'Detalhes compactos' })).toHaveClass('data-table--grid');
+});
+
+test('reserves the first compact detail row for the patrimony number and actions', () => {
+  render(
+    <DynamicDataTable
+      ariaLabel="Detalhes com ações compactas"
+      rows={rows}
+      columns={columns}
+      getRowKey={(row) => row.id}
+      mobileCardLayout="detail-grid"
+    />,
+  );
+
+  expect(screen.getByRole('table', { name: 'Detalhes com ações compactas' })).toHaveClass('data-table--grid', 'data-table--detail-grid');
 });
 
 test('shows row actions in a three-dot menu and runs the selected action', () => {

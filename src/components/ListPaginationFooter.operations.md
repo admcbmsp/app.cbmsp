@@ -22,8 +22,8 @@ Provide the shared pagination footer for a list or table. It displays the page-s
 
 ## UI and accessibility
 
-- The footer is unboxed and visually detached from the table, with a small gap above it. It adapts from a stacked layout on narrow screens to a horizontal layout on wider screens.
-- The page-size select has a visible label. Result-range changes are announced politely. Previous and next icon buttons have accessible names.
+- The footer is unboxed and visually detached from the table, with a small gap above it. Below 640 px, it uses compact page and range labels and keeps the controls on one line when space permits; wider screens show the full labels.
+- The page-size select has an accessible label. Result-range changes are announced politely. Previous and next icon buttons have accessible names.
 - Use theme text, focus, and disabled tokens/classes. Keep the footer visually separate from the table border.
 
 ## Decisions and rationale

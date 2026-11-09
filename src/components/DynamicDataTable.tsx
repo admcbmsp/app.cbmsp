@@ -50,6 +50,7 @@ type DynamicDataTableProps<T, Key extends string = string> = {
   actionLabel?: string;
   actionAlign?: TableTextAlignment;
   pagination?: boolean;
+  mobileCardLayout?: 'list' | 'grid' | 'detail-grid';
   emptyState?: ReactNode;
   /** Placement for the optional column picker; null waits for an external target. */
   columnControlTarget?: HTMLDivElement | null;
@@ -70,6 +71,7 @@ export function DynamicDataTable<T, Key extends string = string>({
   actionLabel = 'Ações',
   actionAlign = 'center',
   pagination = true,
+  mobileCardLayout = 'list',
   emptyState,
   columnControlTarget,
 }: DynamicDataTableProps<T, Key>) {
@@ -97,7 +99,7 @@ export function DynamicDataTable<T, Key extends string = string>({
   ];
   const canConfigureColumns = Boolean(visibleColumnKeys && defaultColumnKeys && onVisibleColumnKeysChange);
   const hasActions = getActions !== undefined;
-  const hasSortableColumns = visibleColumns.some((column) => column.sortValue !== undefined);
+  const hasSortableColumns = rows.length > 0 && visibleColumns.some((column) => column.sortValue !== undefined);
   const sortedColumn = sort ? visibleColumns.find((column) => column.key === sort.key && column.sortValue) : undefined;
   const sortedRows = useMemo(() => {
     if (!sort) return rows;
@@ -278,15 +280,15 @@ export function DynamicDataTable<T, Key extends string = string>({
         </div>
       )}
 
-      <div className="max-w-full overflow-x-auto rounded-md border border-line bg-card">
-        <table role="table" aria-label={ariaLabel} className="data-table w-max min-w-full text-center text-body text-foreground">
+      <div className="data-table-scroll max-w-full overflow-x-auto rounded-md border border-line bg-card">
+        <table role="table" aria-label={ariaLabel} className={`data-table ${mobileCardLayout !== 'list' ? 'data-table--grid' : ''} ${mobileCardLayout === 'detail-grid' ? 'data-table--detail-grid' : ''} w-max min-w-full text-center text-body text-foreground`}>
           <thead className="bg-muted/50 text-label font-medium text-foreground">
             <tr role="row">
               {visibleColumns.map((column) => {
                 const direction = sort?.key === column.key ? sort.direction : null;
                 return (
-                  <th key={column.key} role="columnheader" scope="col" data-align={column.align ?? 'center'} aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'} className={`border-b border-line px-4 py-3 font-medium first:pl-5 sm:first:pl-6 ${textAlignmentClasses[column.align ?? 'center']}`}>
-                    {column.sortValue ? (
+                  <th key={column.key} role="columnheader" scope="col" aria-label={column.label} data-align={column.align ?? 'center'} aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'} className={`border-b border-line px-4 py-3 font-medium first:pl-5 sm:first:pl-6 ${textAlignmentClasses[column.align ?? 'center']}`}>
+                  {column.sortValue && rows.length > 0 ? (
                       <button type="button" onClick={() => toggleSort(column.key)} className="inline-flex items-center gap-1.5 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
                         {column.label}
                         {direction && <Icon name={direction === 'asc' ? 'arrow-up' : 'arrow-down'} className="h-3 w-3" />}
@@ -339,7 +341,7 @@ export function DynamicDataTable<T, Key extends string = string>({
           </tbody>
         </table>
       </div>
-      {pagination && (
+      {pagination && sortedRows.length > 0 && (
         <ListPaginationFooter
           ariaLabel={ariaLabel}
           page={activePage}

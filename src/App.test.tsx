@@ -71,6 +71,21 @@ test('reader can access the stock but cannot create items', () => {
   expect(screen.queryByRole('button', { name: /novo item/i })).not.toBeInTheDocument();
 });
 
+test('expands inventory filters from the compact filter control', async () => {
+  render(<App />);
+  loginAs(/mariana costa/i);
+  await openInventory();
+
+  const filterToggle = screen.getByRole('button', { name: /filtros/i });
+  expect(filterToggle).toHaveAttribute('aria-expanded', 'false');
+  expect(filterToggle).toHaveAttribute('aria-controls', 'inventory-filter-controls');
+
+  fireEvent.click(filterToggle);
+
+  expect(filterToggle).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('button', { name: 'Tipo' })).toBeInTheDocument();
+});
+
 test('suggests descriptions after three letters and summarizes the selected description', async () => {
   render(<App />);
 
