@@ -169,5 +169,135 @@ code {
   .data-table--detail-grid tbody > tr > td[data-row-actions]::before {
     content: none;
   }
+
+  .data-table--summary-chips tbody > tr {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background-color: var(--color-surface);
+  }
+
+  .data-table--summary-chips tbody > tr.group,
+  .data-table--summary-chips tbody > tr.group:hover {
+    background-color: var(--color-surface);
+  }
+
+  .data-table--summary-chips tbody > tr > td:first-child {
+    order: 0;
+    flex: 1 1 100%;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.125rem;
+    padding: 0.125rem 2.75rem 0.375rem 0.125rem;
+    border: 0;
+  }
+
+  .data-table--summary-chips tbody > tr > td:first-child::before {
+    flex: 0 0 auto;
+    width: auto;
+    margin-bottom: 0.125rem;
+    font-size: 0.6875rem;
+    line-height: 1rem;
+  }
+
+  .data-table--summary-chips tbody > tr > td:first-child > [data-cell-content] {
+    flex: 0 0 auto;
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone]:not(:first-child):not([data-row-actions]) {
+    order: 1;
+    flex: 1 1 9rem;
+    flex-direction: row;
+    width: auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid color-mix(in srgb, var(--mobile-chip-tone) 32%, var(--color-border));
+    border-radius: 0.5rem;
+    background-color: color-mix(in srgb, var(--mobile-chip-tone) 12%, var(--color-surface));
+    color: var(--mobile-chip-tone);
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone="primary"] {
+    --mobile-chip-tone: var(--color-primary-strong);
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone="success"] {
+    --mobile-chip-tone: var(--color-success);
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone="warning"] {
+    --mobile-chip-tone: var(--color-warning);
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone="error"] {
+    --mobile-chip-tone: var(--color-error);
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone="neutral"] {
+    --mobile-chip-tone: var(--color-muted);
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone]:not(:first-child):not([data-row-actions])::before {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: color-mix(in srgb, var(--mobile-chip-tone) 66%, var(--color-foreground));
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1rem;
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone]:not(:first-child):not([data-row-actions]) > [data-cell-content] {
+    flex: 0 0 auto;
+    width: auto;
+    margin-left: auto;
+    justify-content: flex-end;
+    border-left: 1px solid color-mix(in srgb, var(--mobile-chip-tone) 32%, transparent);
+    padding-left: 0.5rem;
+    color: var(--mobile-chip-tone);
+    text-align: right;
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-mobile-chip-tone]:not(:first-child):not([data-row-actions]) > [data-cell-content] > * {
+    color: inherit;
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-row-actions] {
+    position: absolute;
+    top: 0.625rem;
+    right: 0.625rem;
+    order: 0;
+    display: flex;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-row-actions]::before {
+    content: none;
+  }
+
+  .data-table--summary-chips tbody > tr > td[data-row-actions] > [data-cell-content] {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    justify-content: flex-end;
+  }
 }
 

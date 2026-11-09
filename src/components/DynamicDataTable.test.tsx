@@ -154,6 +154,35 @@ test('reserves the first compact detail row for the patrimony number and actions
   expect(screen.getByRole('table', { name: 'Detalhes com ações compactas' })).toHaveClass('data-table--grid', 'data-table--detail-grid');
 });
 
+test('renders summary chips after the item heading and keeps row actions unboxed', () => {
+  const summaryColumns: DynamicDataTableColumn<RecordRow, ColumnKey>[] = [
+    { ...columns[0], label: 'Item' },
+    { ...columns[1], label: 'Operacional', mobileChipTone: 'success' },
+    { ...columns[2], label: 'Total', mobileChipTone: 'primary' },
+  ];
+  render(
+    <DynamicDataTable
+      ariaLabel="Resumo por item"
+      rows={rows}
+      columns={summaryColumns}
+      getRowKey={(row) => row.id}
+      getActionMenuLabel={(row) => `Ações para ${row.asset}`}
+      getActions={() => [{ key: 'view', label: 'Ver item', onSelect: () => undefined }]}
+      mobileCardLayout="summary-chips"
+    />,
+  );
+
+  const table = screen.getByRole('table', { name: 'Resumo por item' });
+  const row = within(table).getAllByRole('row')[1];
+
+  expect(table).toHaveClass('data-table--summary-chips');
+  expect(row.querySelector('[data-label="Item"]')).toHaveAttribute('data-mobile-chip-tone', 'neutral');
+  expect(row.querySelector('[data-label="Operacional"]')).toHaveAttribute('data-mobile-chip-tone', 'success');
+  expect(row.querySelector('[data-label="Total"]')).toHaveAttribute('data-mobile-chip-tone', 'primary');
+  expect(row.lastElementChild).toHaveAttribute('data-row-actions');
+  expect(row.lastElementChild).not.toHaveAttribute('data-mobile-chip-tone');
+});
+
 test('shows row actions in a three-dot menu and runs the selected action', () => {
   const onAction = jest.fn();
   renderTable(undefined, onAction);

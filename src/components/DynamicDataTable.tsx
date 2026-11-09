@@ -9,6 +9,9 @@ import { TableActionMenu } from './TableActionMenu';
 import type { TableAction } from './TableActionMenu';
 import { COLOR_TRANSITION_CLASS } from '../theme/motion';
 
+export type TableTextAlignment = 'start' | 'center' | 'end';
+export type MobileChipTone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+
 export type DynamicDataTableColumn<T, Key extends string = string> = {
   key: Key;
   label: string;
@@ -17,9 +20,8 @@ export type DynamicDataTableColumn<T, Key extends string = string> = {
   align?: TableTextAlignment;
   locked?: boolean;
   numeric?: boolean;
+  mobileChipTone?: MobileChipTone;
 };
-
-export type TableTextAlignment = 'start' | 'center' | 'end';
 
 const textAlignmentClasses: Record<TableTextAlignment, string> = {
   start: 'text-start',
@@ -50,7 +52,7 @@ type DynamicDataTableProps<T, Key extends string = string> = {
   actionLabel?: string;
   actionAlign?: TableTextAlignment;
   pagination?: boolean;
-  mobileCardLayout?: 'list' | 'grid' | 'detail-grid';
+  mobileCardLayout?: 'list' | 'grid' | 'detail-grid' | 'summary-chips';
   emptyState?: ReactNode;
   /** Placement for the optional column picker; null waits for an external target. */
   columnControlTarget?: HTMLDivElement | null;
@@ -281,7 +283,7 @@ export function DynamicDataTable<T, Key extends string = string>({
       )}
 
       <div className="data-table-scroll max-w-full overflow-x-auto rounded-md border border-line bg-card">
-        <table role="table" aria-label={ariaLabel} className={`data-table ${mobileCardLayout !== 'list' ? 'data-table--grid' : ''} ${mobileCardLayout === 'detail-grid' ? 'data-table--detail-grid' : ''} w-max min-w-full text-center text-body text-foreground`}>
+        <table role="table" aria-label={ariaLabel} className={`data-table ${mobileCardLayout !== 'list' ? 'data-table--grid' : ''} ${mobileCardLayout === 'detail-grid' ? 'data-table--detail-grid' : ''} ${mobileCardLayout === 'summary-chips' ? 'data-table--summary-chips' : ''} w-max min-w-full text-center text-body text-foreground`}>
           <thead className="bg-muted/50 text-label font-medium text-foreground">
             <tr role="row">
               {visibleColumns.map((column) => {
@@ -316,7 +318,7 @@ export function DynamicDataTable<T, Key extends string = string>({
                 className={`group ${COLOR_TRANSITION_CLASS} even:bg-muted/60 hover:bg-muted ${onRowClick ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary' : ''}`}
               >
                 {visibleColumns.map((column) => (
-                  <td key={column.key} role="cell" data-label={column.label} data-align={column.align ?? 'center'} className="px-4 py-4 first:pl-5 sm:first:pl-6">
+                  <td key={column.key} role="cell" data-label={column.label} data-align={column.align ?? 'center'} data-mobile-chip-tone={mobileCardLayout === 'summary-chips' ? (column.mobileChipTone ?? 'neutral') : undefined} className="px-4 py-4 first:pl-5 sm:first:pl-6">
                     <div data-cell-content data-align={column.align ?? 'center'} className={`flex w-full min-w-0 items-center ${contentJustificationClasses[column.align ?? 'center']} ${textAlignmentClasses[column.align ?? 'center']} ${column.numeric ? 'tabular-nums' : ''}`}>
                       {column.renderCell(row)}
                     </div>

@@ -12,12 +12,12 @@ Render a generic table from consumer-supplied rows and cell renderers. Optional 
 - `visibleColumnKeys`, `defaultColumnKeys`, and `onVisibleColumnKeysChange` are optional. Supply all three to enable the column picker; when omitted, all columns are shown in their declared order.
 - `getActions` is optional. Supplying it adds the final actions column and its per-row menu.
 - `onRowClick`, `getRowLabel`, `getActionMenuLabel`, `actionLabel`, `columnControlTarget`, `pagination`, and `emptyState` are optional.
-- Columns provide a stable key, display label, and cell renderer; `sortValue` enables sorting, `locked` prevents hiding, `numeric` enables tabular numerals, and optional `align` sets the horizontal alignment of both the header and body cell.
+- Columns provide a stable key, display label, and cell renderer; `sortValue` enables sorting, `locked` prevents hiding, `numeric` enables tabular numerals, and optional `align` sets the horizontal alignment of both the header and body cell. `mobileChipTone` selects the semantic tint for `summary-chips` and accepts `primary`, `success`, `warning`, `error`, or `neutral`; it defaults to `neutral`.
 - `align` accepts `start`, `center`, or `end` and defaults to `center`. Use logical alignment so start/end follow writing direction. `actionAlign` controls the actions header/body cells and also defaults to `center`.
 - Example: set `align: 'start'` on a long description column; leave counts and status columns unset to use the centered default.
 - The column visibility list is controlled by the consumer when the picker is enabled. The component reports changes through `onVisibleColumnKeysChange` and does not persist them itself.
 - `pagination` defaults to `true`. Set it to `false` to render all rows without a page-size control or footer. `emptyState` supplies optional content for a zero-row table.
-- `mobileCardLayout` selects the compact row presentation below 640 px. The default `list` layout shows one labeled field per row; `grid` places fields in a two-column card; `detail-grid` also reserves its first row for the patrimony number and row actions.
+- `mobileCardLayout` selects the compact row presentation below 640 px. The default `list` layout shows one labeled field per row; `grid` places fields in a two-column card; `detail-grid` also reserves its first row for the patrimony number and row actions; `summary-chips` places the first column in a card heading and each remaining field in a tone-coded chip, with actions unboxed at the heading's end.
 - `columnControlTarget` controls where the column picker is rendered: omitted (`undefined`) means render it as a standalone control before the table; an `HTMLDivElement` renders it into that host with a React portal; `null` means an external host is expected but not ready, so the picker is temporarily not rendered. A consumer using an external host must keep it mounted while the table needs the control.
 
 ## Behavior and states
@@ -34,7 +34,7 @@ Render a generic table from consumer-supplied rows and cell renderers. Optional 
 
 ## UI and accessibility
 
-- Below 1280 px, rows appear as labeled cards while table and cell semantics remain available to assistive technology. At wider sizes, the content-sized table scrolls horizontally inside its bordered wrapper. When any visible column is sortable, the labeled sort control is available above the results.
+- Below 1280 px, rows appear as labeled cards while table and cell semantics remain available to assistive technology. The `summary-chips` layout applies below 640 px and renders each non-heading data column as its own flat chip. At wider sizes, the content-sized table scrolls horizontally inside its bordered wrapper. When any visible column is sortable, the labeled sort control is available above the results.
 - The table border encloses only the desktop table. The results heading and any consumer-placed column control remain outside it; the default column control is rendered as a simple standalone control before the results, without a padded toolbar or sort instruction.
 - When pagination is enabled, its footer follows the table as an unboxed row with a small gap. It is visually detached from the table border.
 - Apply each column's alignment consistently to its header and body cell. Keep column content and headings aligned while the table scrolls.

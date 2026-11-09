@@ -76,7 +76,7 @@ import { applyTheme, getInitialTheme, ThemeMode } from './theme/theme';
 import { COLOR_TRANSITION_CLASS } from './theme/motion';
 import { defaultInventoryGroupColumns } from './types/inventoryViews';
 import type { InventoryFilters, InventoryGroupColumnKey } from './types/inventoryViews';
-import type { DynamicDataTableColumn } from './components/DynamicDataTable';
+import type { DynamicDataTableColumn, MobileChipTone } from './components/DynamicDataTable';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -524,6 +524,20 @@ const inventoryDetailColumns: DynamicDataTableColumn<InventoryItem, InventoryCol
 
 type InventoryGroupRow = [string, InventoryItem[]];
 
+const operationalStatusMobileChipTones: Record<OperationalStatus, MobileChipTone> = {
+  operacional: 'success',
+  'em-manutencao': 'warning',
+  inservivel: 'error',
+  'em-transito': 'primary',
+};
+
+const itemStatusMobileChipTones: Record<ItemStatus, MobileChipTone> = {
+  active: 'success',
+  pending: 'warning',
+  rejected: 'error',
+  deactivated: 'neutral',
+};
+
 const inventoryGroupColumns: DynamicDataTableColumn<InventoryGroupRow, InventoryGroupColumnKey>[] = [
   {
     key: 'description',
@@ -537,6 +551,7 @@ const inventoryGroupColumns: DynamicDataTableColumn<InventoryGroupRow, Inventory
     key: 'total',
     label: 'Total',
     numeric: true,
+    mobileChipTone: 'primary',
     sortValue: ([, rows]) => rows.length,
     renderCell: ([, rows]) => <span className="font-semibold tabular-nums text-foreground">{formatQuantity(rows.length)}</span>,
   },
@@ -544,6 +559,7 @@ const inventoryGroupColumns: DynamicDataTableColumn<InventoryGroupRow, Inventory
     key: `operational:${status}` as InventoryGroupColumnKey,
     label: operationalStatusLabels[status],
     numeric: true,
+    mobileChipTone: operationalStatusMobileChipTones[status],
     sortValue: ([, rows]: InventoryGroupRow) => rows.filter((item) => item.operationalStatus === status).length,
     renderCell: ([, rows]: InventoryGroupRow) => <span className="tabular-nums text-foreground">{formatQuantity(rows.filter((item) => item.operationalStatus === status).length)}</span>,
   })),
@@ -551,6 +567,7 @@ const inventoryGroupColumns: DynamicDataTableColumn<InventoryGroupRow, Inventory
     key: `status:${status}` as InventoryGroupColumnKey,
     label: statusLabels[status],
     numeric: true,
+    mobileChipTone: itemStatusMobileChipTones[status],
     sortValue: ([, rows]: InventoryGroupRow) => rows.filter((item) => item.status === status).length,
     renderCell: ([, rows]: InventoryGroupRow) => <span className="tabular-nums text-foreground">{formatQuantity(rows.filter((item) => item.status === status).length)}</span>,
   })),
@@ -924,7 +941,7 @@ function InventoryPage({
             ariaLabel="Patrimônios por descrição"
             rows={groups}
             columns={inventoryGroupColumns}
-            mobileCardLayout="grid"
+            mobileCardLayout="summary-chips"
             visibleColumnKeys={visibleGroupColumns}
             defaultColumnKeys={defaultInventoryGroupColumns}
             onVisibleColumnKeysChange={setVisibleGroupColumns}
