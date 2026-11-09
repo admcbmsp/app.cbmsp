@@ -16,7 +16,7 @@ import { InventoryViewTemplates } from './components/InventoryViewTemplates';
 import { RecentMovementsTable } from './components/inventory/RecentMovementsTable';
 import { BadgeKind, StatusBadge } from './components/inventory/StatusBadge';
 import { EditUserRoleModal } from './components/users/EditUserRoleModal';
-import { Label as FieldLabel, SelectInput, TextInput } from './library';
+import { Label as FieldLabel, SelectInput, TextAreaField, TextInput } from './library';
 import { inventorySeed } from './data/inventory';
 import { demoPassword, demoUsers } from './data/users';
 import { InventoryShell } from './layouts/InventoryShell';
@@ -72,6 +72,7 @@ import type { InventoryColumnKey } from './services/inventoryReports';
 import { normalizeInventoryFilters } from './services/savedInventoryViews';
 import { createReportHtml } from './services/reportHtml';
 import { openPrintReport } from './services/printReport';
+import { MAX_REJECTION_REASON_LENGTH, rejectInventoryItem } from './services/inventoryApi';
 import { applyTheme, getInitialTheme, ThemeMode } from './theme/theme';
 import { COLOR_TRANSITION_CLASS } from './theme/motion';
 import { defaultInventoryGroupColumns } from './types/inventoryViews';
@@ -124,7 +125,7 @@ const createHistoryEntry = (
   user: AppUser,
   action: InventoryHistoryAction,
   summary: string,
-  fields: Partial<Pick<InventoryHistoryEntry, 'previousStatus' | 'nextStatus' | 'previousCity' | 'nextCity'>> = {},
+  fields: Partial<Pick<InventoryHistoryEntry, 'previousStatus' | 'nextStatus' | 'previousCity' | 'nextCity' | 'reason'>> = {},
 ): InventoryHistoryEntry => ({
   id: `history-${Date.now()}-${Math.random().toString(16).slice(2)}`,
   action,
@@ -978,7 +979,7 @@ function ItemFormModal({
   role: UserRole;
   defaultCity: City | null;
   onClose: () => void;
-  onSubmit: (values: InventoryFormValues) => void;
+  onSubmit: (values: InventoryFormValues, rejectionReason: string) => Promise<void> | void;
 }) {
   const isEditing = Boolean(item);
   const isAdmin = canEditAdministrativeFields(role);
@@ -999,8 +1000,13 @@ function ItemFormModal({
   );
   const effectiveStatus = !isEditing && (role === 'adm' || hasApprovedRegistration(items, form.description)) ? 'active' : form.status;
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState(() =>
+    item?.history.slice().reverse().find((entry) => entry.action === 'rejected')?.reason ?? '',
+  );
   const [cityQuery, setCityQuery] = useState<string>(getCityLabel(item?.cidade ?? defaultCity ?? City.EB_PAULINIA));
   const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
+  const isRejecting = isEditing && isAdmin && item?.status !== 'rejected' && form.status === 'rejected';
 
   const citySuggestions = useMemo(() => {
     const normalizedQuery = normalizeSearchText(cityQuery.trim());
@@ -1028,8 +1034,9 @@ function ItemFormModal({
     updateField('cidade', city);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSubmitting) return;
     if (!form.description.trim() || !form.nrPatrimonio.trim() || !cityQuery.trim()) {
       setError('Preencha a descrição, o número de patrimônio e a cidade/unidade.');
       return;
@@ -1043,9 +1050,25 @@ function ItemFormModal({
       setError('O valor deve ser maior que zero.');
       return;
     }
+    const normalizedRejectionReason = rejectionReason.trim();
+    if (isRejecting && !normalizedRejectionReason) {
+      setError('Informe o motivo da rejeição.');
+      return;
+    }
+    if (isRejecting && normalizedRejectionReason.length > MAX_REJECTION_REASON_LENGTH) {
+      setError(`O motivo da rejeição deve ter no máximo ${MAX_REJECTION_REASON_LENGTH} caracteres.`);
+      return;
+    }
 
     setError('');
-    onSubmit({ ...form, description: form.description.trim(), nrPatrimonio: form.nrPatrimonio.trim() });
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ ...form, description: form.description.trim(), nrPatrimonio: form.nrPatrimonio.trim() }, normalizedRejectionReason);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar o registro.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -1057,8 +1080,8 @@ function ItemFormModal({
       closeLabel="Fechar formulário"
       size="lg"
       actions={[
-        { label: 'Cancelar', variant: 'secondary', onClick: onClose },
-        { label: 'Salvar registro', variant: 'primary', type: 'submit', form: 'item-form' },
+        { label: 'Cancelar', variant: 'secondary', disabled: isSubmitting, onClick: onClose },
+        { label: 'Salvar registro', variant: 'primary', type: 'submit', form: 'item-form', loading: isSubmitting },
       ]}
     >
         <form id="item-form" onSubmit={handleSubmit} className="space-y-5">
@@ -1133,7 +1156,7 @@ function ItemFormModal({
             <div>
               <FieldLabel htmlFor="item-status">Cadastro</FieldLabel>
               {isAdmin && isEditing ? (
-                <SelectInput id="item-status" value={form.status} onChange={(event) => updateField('status', event.target.value as ItemStatus)}>
+                <SelectInput id="item-status" value={form.status} onChange={(event) => { setError(''); updateField('status', event.target.value as ItemStatus); }}>
                   {itemStatuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
                 </SelectInput>
               ) : (
@@ -1144,6 +1167,20 @@ function ItemFormModal({
               )}
             </div>
           </div>
+
+          {isRejecting && (
+            <div className="space-y-1.5">
+              <TextAreaField
+                label="Motivo da rejeição"
+                required
+                maxLength={MAX_REJECTION_REASON_LENGTH}
+                value={rejectionReason}
+                onChange={(event) => { setRejectionReason(event.target.value); setError(''); }}
+                description={`${rejectionReason.length}/${MAX_REJECTION_REASON_LENGTH} caracteres`}
+                placeholder="Explique por que este patrimônio está sendo rejeitado."
+              />
+            </div>
+          )}
 
           {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">{error}</div>}
 
@@ -1166,6 +1203,75 @@ function ToastBanner({ toast, onClose }: { toast: Toast; onClose: () => void }) 
       <div className="min-w-0 flex-1 break-words pt-0.5"><p className="text-sm font-semibold text-slate-800">{toast.message}</p><p className="mt-0.5 text-xs text-slate-500">{toast.detail ?? 'Alteração aplicada apenas nesta sessão.'}</p></div>
       <IconButton label="Fechar mensagem" onClick={onClose} className="-mr-2 -mt-2"><Icon name="close" className="h-4 w-4" /></IconButton>
     </div>
+  );
+}
+
+function RejectItemDialog({
+  item,
+  onClose,
+  onSubmit,
+}: {
+  item: InventoryItem;
+  onClose: () => void;
+  onSubmit: (reason: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedReason = reason.trim();
+    if (!normalizedReason) {
+      setError('Informe o motivo da rejeição.');
+      return;
+    }
+    if (normalizedReason.length > MAX_REJECTION_REASON_LENGTH) {
+      setError(`O motivo da rejeição deve ter no máximo ${MAX_REJECTION_REASON_LENGTH} caracteres.`);
+      return;
+    }
+
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await onSubmit(normalizedReason);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Não foi possível rejeitar o patrimônio.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(nextOpen) => { if (!nextOpen && !isSubmitting) onClose(); }}
+      title="Rejeitar patrimônio"
+      caption="Informe o motivo. Ele será registrado no histórico deste patrimônio."
+      closeLabel="Fechar rejeição"
+      size="md"
+      actions={[
+        { label: 'Cancelar', variant: 'secondary', disabled: isSubmitting, onClick: onClose },
+        { label: 'Confirmar rejeição', variant: 'destructive', type: 'submit', form: 'reject-item-form', loading: isSubmitting },
+      ]}
+    >
+      <form id="reject-item-form" onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-md border border-line bg-surface-muted px-4 py-3">
+          <p className="text-sm font-semibold text-foreground">{item.description}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Patrimônio {item.nrPatrimonio}</p>
+        </div>
+        <TextAreaField
+          label="Motivo da rejeição"
+          required
+          maxLength={MAX_REJECTION_REASON_LENGTH}
+          value={reason}
+          onChange={(event) => { setReason(event.target.value); setError(''); }}
+          description={`${reason.length}/${MAX_REJECTION_REASON_LENGTH} caracteres`}
+          placeholder="Explique por que este patrimônio está sendo rejeitado."
+        />
+        {error && <div role="alert" className="rounded-md border border-error bg-error-soft px-3.5 py-3 text-sm text-error">{error}</div>}
+      </form>
+    </Dialog>
   );
 }
 
@@ -1208,6 +1314,7 @@ function App() {
   const [selectedUnit, setSelectedUnit] = useState<City | null>(() => initialRoute.unit);
   const [items, setItems] = useState<InventoryItem[]>(inventorySeed);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<InventoryItem | null>(null);
+  const [itemToReject, setItemToReject] = useState<InventoryItem | null>(null);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
   const [exportScope, setExportScope] = useState<'all' | null>(null);
@@ -1425,12 +1532,17 @@ function App() {
     updateAppRouteUrl(routePage, nextFilter, true, selectedUnit, routePage === 'details' ? selectedDescription : null);
   };
 
-  const handleSaveItem = (values: InventoryFormValues) => {
+  const handleSaveItem = async (values: InventoryFormValues, rejectionReason: string) => {
     if (!session || !modal) {
       return;
     }
 
     if (modal.mode === 'edit') {
+      const rejectionTransition = session.role === 'adm' && modal.item.status !== 'rejected' && values.status === 'rejected';
+      if (rejectionTransition) {
+        await rejectInventoryItem(modal.item.uuid, rejectionReason);
+      }
+
       setItems((currentItems) => currentItems.map((currentItem) => {
           if (currentItem.uuid !== modal.item.uuid) {
             return currentItem;
@@ -1455,12 +1567,20 @@ function App() {
                 ? 'deactivated'
                 : 'administrativeStatusChanged'
             : cityChanged ? 'moved' : 'edited';
-          const historyEntry = createHistoryEntry(session, historyAction, summary, {
-            previousStatus: currentItem.status,
-            nextStatus,
-            previousCity: currentItem.cidade,
-            nextCity: values.cidade,
-          });
+          const historyEntry = rejectionTransition
+            ? createHistoryEntry(session, 'rejected', `MOTIVO DA REJEIÇÃO: ${rejectionReason.trim()}`, {
+              reason: rejectionReason.trim(),
+              previousStatus: currentItem.status,
+              nextStatus,
+              previousCity: currentItem.cidade,
+              nextCity: values.cidade,
+            })
+            : createHistoryEntry(session, historyAction, summary, {
+              previousStatus: currentItem.status,
+              nextStatus,
+              previousCity: currentItem.cidade,
+              nextCity: values.cidade,
+            });
 
           const editableValues = session.role === 'adm'
             ? { ...values, status: nextStatus }
@@ -1480,7 +1600,7 @@ function App() {
             history: [...currentItem.history, historyEntry],
           };
         }));
-      setToast({ message: 'Registro atualizado com sucesso.', tone: 'success' });
+      setToast({ message: rejectionTransition ? 'Patrimônio rejeitado; motivo registrado.' : 'Registro atualizado com sucesso.', tone: 'success' });
     } else {
       const status: ItemStatus = session.role === 'adm' || hasApprovedRegistration(unitScopedItems, values.description) ? 'active' : 'pending';
       const historyEntry = createHistoryEntry(session, 'created', status === 'active' ? 'Exemplar ativado em cadastro aprovado.' : 'Patrimônio criado e enviado para aprovação do gestor.', {
@@ -1504,7 +1624,7 @@ function App() {
     setSelectedHistoryItem(null);
   };
 
-  const handleReviewStatus = (item: InventoryItem, nextStatus: 'active' | 'rejected') => {
+  const handleApproveItem = (item: InventoryItem) => {
     if (!session || session.role !== 'adm' || item.status !== 'pending') {
       return;
     }
@@ -1514,21 +1634,53 @@ function App() {
         return currentItem;
       }
 
-      const historyEntry = createHistoryEntry(session, nextStatus === 'active' ? 'approved' : 'rejected', nextStatus === 'active' ? 'Patrimônio aprovado pelo gestor.' : 'Patrimônio rejeitado pelo gestor.', {
+      const historyEntry = createHistoryEntry(session, 'approved', 'Patrimônio aprovado pelo gestor.', {
         previousStatus: currentItem.status,
-        nextStatus,
+        nextStatus: 'active',
         nextCity: currentItem.cidade,
       });
 
       return {
         ...currentItem,
-        status: nextStatus,
+        status: 'active',
         lastTimeTouched: historyEntry.timestamp,
         history: [...currentItem.history, historyEntry],
       };
     }));
     setSelectedHistoryItem(null);
-    setToast({ message: nextStatus === 'active' ? 'Patrimônio aprovado e liberado para consulta.' : 'Patrimônio rejeitado e mantido fora da lista operacional.', tone: nextStatus === 'active' ? 'success' : 'info' });
+    setToast({ message: 'Patrimônio aprovado e liberado para consulta.', tone: 'success' });
+  };
+
+  const handleRejectItem = async (item: InventoryItem, reason: string) => {
+    if (!session || session.role !== 'adm' || item.status !== 'pending') {
+      throw new Error('Este patrimônio não está mais pendente de aprovação.');
+    }
+
+    await rejectInventoryItem(item.uuid, reason);
+
+    setItems((currentItems) => currentItems.map((currentItem) => {
+      if (currentItem.uuid !== item.uuid || currentItem.status !== 'pending' || (selectedUnit !== null && currentItem.cidade !== selectedUnit)) {
+        return currentItem;
+      }
+
+      const normalizedReason = reason.trim();
+      const historyEntry = createHistoryEntry(session, 'rejected', `MOTIVO DA REJEIÇÃO: ${normalizedReason}`, {
+        reason: normalizedReason,
+        previousStatus: currentItem.status,
+        nextStatus: 'rejected',
+        nextCity: currentItem.cidade,
+      });
+
+      return {
+        ...currentItem,
+        status: 'rejected',
+        lastTimeTouched: historyEntry.timestamp,
+        history: [...currentItem.history, historyEntry],
+      };
+    }));
+    setSelectedHistoryItem(null);
+    setItemToReject(null);
+    setToast({ message: 'Patrimônio rejeitado; motivo registrado.', tone: 'success' });
   };
 
   const handleExport = (rows: InventoryItem[], columnKeys: InventoryColumnKey[], format: 'csv' | 'pdf', filenamePrefix: string, generatedBy: AppUser) => {
@@ -1574,7 +1726,7 @@ function App() {
         {currentPage === 'dashboard' ? (
           <DashboardPage user={session} items={unitScopedItems} onNavigate={handleNavigate} onFilterInventory={handleFilterInventory} onOpenHistory={setSelectedHistoryItem} onEditItem={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} />
         ) : currentPage === 'inventory' || currentPage === 'details' ? (
-          <InventoryPage user={session} items={unitScopedItems} selectedDescription={currentPage === 'details' ? selectedDescription : null} initialFilter={inventoryFilter} onOpenHistory={setSelectedHistoryItem} onOpenDescription={handleOpenDescription} onBackToInventory={handleBackToInventory} onApproveItem={(item) => handleReviewStatus(item, 'active')} onRejectItem={(item) => handleReviewStatus(item, 'rejected')} onEdit={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} onExportCurrent={handleExportCurrent} onFilterChange={handleInventoryFilterChange} onToast={(nextToast) => setToast(nextToast)} />
+          <InventoryPage user={session} items={unitScopedItems} selectedDescription={currentPage === 'details' ? selectedDescription : null} initialFilter={inventoryFilter} onOpenHistory={setSelectedHistoryItem} onOpenDescription={handleOpenDescription} onBackToInventory={handleBackToInventory} onApproveItem={handleApproveItem} onRejectItem={(item) => setItemToReject(item)} onEdit={(item) => setModal({ mode: 'edit', item })} onCreate={() => setModal({ mode: 'create' })} onExportCurrent={handleExportCurrent} onFilterChange={handleInventoryFilterChange} onToast={(nextToast) => setToast(nextToast)} />
         ) : currentPage === 'users' ? (
           <UserManagementPage users={selectedUnit ? users.filter((user) => user.unidade === selectedUnit) : users} onSelectUser={setSelectedUser} />
         ) : (
@@ -1584,6 +1736,7 @@ function App() {
 
       <HistoryDrawer item={selectedHistoryItem} onClose={() => setSelectedHistoryItem(null)} />
       {modal && <ItemFormModal items={unitScopedItems} item={modal.mode === 'edit' ? modal.item : null} role={session.role} defaultCity={selectedUnit} onClose={() => setModal(null)} onSubmit={handleSaveItem} />}
+      {itemToReject && <RejectItemDialog item={itemToReject} onClose={() => setItemToReject(null)} onSubmit={(reason) => handleRejectItem(itemToReject, reason)} />}
       {selectedUser && session.role === 'adm' && <EditUserRoleModal user={selectedUser} onClose={() => setSelectedUser(null)} onSave={handleUpdateUserRole} />}
       {exportScope === 'all' && <ExportFormatModal itemCount={visibleItemsForRole(unitScopedItems, session.role).length} onClose={() => setExportScope(null)} onExport={handleExportAll} />}
       <ToastBanner toast={toast} onClose={() => setToast(null)} />

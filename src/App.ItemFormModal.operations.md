@@ -10,7 +10,7 @@ Collect values for creating or editing one inventory item. The component owns lo
 
 - The parent supplies the available items, optional item being edited, current role, default city/unit, `onClose`, and `onSubmit` callback.
 - The dialog opens when the parent renders this component. Any shell dismissal calls `onClose`.
-- `onSubmit` receives the validated `InventoryFormValues`. The modal does not persist data.
+- `onSubmit` receives the validated `InventoryFormValues` and the trimmed rejection reason. The parent owns persistence and closes the modal only after the operation succeeds.
 
 ## Dialog structure
 
@@ -23,11 +23,13 @@ Collect values for creating or editing one inventory item. The component owns lo
 - Description, asset number, city/unit, and a positive estimated value are required by the current prototype form.
 - A city/unit must be selected from the available suggestions.
 - A non-administrator editing an item can change condition, operational status, and city/unit. Administrative status and administrative fields remain owned by the existing role logic.
+- When an administrator changes an item to **Rejeitado**, the form reveals the required **Motivo da rejeição** field. The reason is trimmed and limited to 281 characters before submission.
+- A successful rejection submits `POST /api/v1/items/{id}/reject` with `{ reason }`. If the request fails, the modal remains open and shows the API error; local status and history are not changed.
 - Form errors are announced with `role="alert"`. Current values remain visible when validation fails.
 
 ## Data and side effects
 
-Uses `InventoryFormValues`, status/condition/type labels, city options, and the parent's submit callback. On submit it trims description and asset number and forwards the resulting values. Persistent storage and server validation are not implemented by this modal.
+Uses `InventoryFormValues`, status/condition/type labels, city options, `TextAreaField`, and the parent's submit callback. On submit it trims description, asset number, and rejection reason and forwards the values. Rejection uses the inventory API service; other prototype edits remain in session memory.
 
 ## Decisions and rationale
 

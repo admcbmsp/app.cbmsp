@@ -28,6 +28,7 @@ export type InventoryHistoryEntry = {
   userName: string;
   timestamp: string;
   summary: string;
+  reason?: string;
   previousStatus?: ItemStatus;
   nextStatus?: ItemStatus;
   previousCity?: City;
