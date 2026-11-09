@@ -88,7 +88,7 @@ test('expands inventory filters from the compact filter control', async () => {
   expect(screen.getByRole('button', { name: 'Tipo' })).toBeInTheDocument();
 });
 
-test('suggests descriptions after three letters and summarizes the selected description', async () => {
+test('suggests descriptions after three letters and filters the inventory to the selected description', async () => {
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: /mariana costa/i }));
@@ -104,13 +104,11 @@ test('suggests descriptions after three letters and summarizes the selected desc
   expect(suggestion).toBeInTheDocument();
   fireEvent.click(suggestion);
 
-  fireEvent.click(screen.getByRole('button', { name: /fazer resumo/i }));
-  const summary = screen.getByRole('region', { name: /resumo da busca/i });
-
-  expect(within(summary).getByText('6')).toBeInTheDocument();
-  expect(within(summary).getByText('itens no total')).toBeInTheDocument();
-  expect(within(summary).getByText('Bom')).toBeInTheDocument();
-  expect(within(summary).getByText('Regular')).toBeInTheDocument();
+  const table = screen.getByRole('table', { name: 'Patrimônios por descrição' });
+  const selectedDescription = within(table).getByRole('row', { name: 'Abrir patrimônios de Viatura de Resgate e Salvamento' });
+  expect(selectedDescription).toHaveTextContent('6');
+  expect(screen.queryByRole('button', { name: /fazer resumo|ocultar resumo/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: /resumo da busca/i })).not.toBeInTheDocument();
 });
 
 test('admin sees the create action after login', () => {

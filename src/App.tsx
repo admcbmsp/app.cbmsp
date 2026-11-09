@@ -464,45 +464,6 @@ function DashboardPage({
   );
 }
 
-type InventorySummary = {
-  description: string;
-  type: string;
-  total: number;
-  stateCounts: Partial<Record<ItemState, number>>;
-};
-
-// Operational documentation: ./App.InventorySummaryCard.operations.md
-function InventorySummaryCard({ summary }: { summary: InventorySummary }) {
-  const statesWithItems = (Object.entries(summary.stateCounts) as [ItemState, number][]).filter(([, count]) => count > 0);
-
-  return (
-    <article className="rounded-md border border-line bg-card p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo patrimonial</p>
-          <h3 className="mt-1.5 break-words text-base font-semibold leading-6 text-foreground">{summary.description}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{getTypeLabel(summary.type)}</p>
-        </div>
-        <div className="shrink-0 text-right">
-          <p className="text-2xl font-semibold tabular-nums leading-none text-foreground">{formatQuantity(summary.total)}</p>
-          <p className="mt-1.5 text-xs text-muted-foreground">itens no total</p>
-        </div>
-      </div>
-
-      {statesWithItems.length > 0 && (
-        <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 sm:grid-cols-4">
-          {statesWithItems.map(([state, count]) => (
-            <div key={state} className="rounded-sm border border-line bg-surface-muted px-3 py-2">
-              <dt className="text-xs leading-4 text-muted-foreground">{stateLabels[state]}</dt>
-              <dd className="mt-0.5 text-lg font-semibold tabular-nums leading-6 text-foreground">{formatQuantity(count)}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </article>
-  );
-}
-
 const inventoryDetailColumns: DynamicDataTableColumn<InventoryItem, InventoryColumnKey>[] = [
   {
     key: 'nrPatrimonio',
@@ -612,7 +573,6 @@ function InventoryPage({
   const [operationalStatusFilters, setOperationalStatusFilters] = useState<OperationalStatus[]>(() => initialFilter?.operationalStatuses ?? []);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [summaryVisible, setSummaryVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<InventoryColumnKey[]>(defaultInventoryColumns);
   const [visibleGroupColumns, setVisibleGroupColumns] = useState<InventoryGroupColumnKey[]>([...defaultInventoryGroupColumns]);
   const [groupColumnControlTarget, setGroupColumnControlTarget] = useState<HTMLDivElement | null>(null);
@@ -693,25 +653,6 @@ function InventoryPage({
       : { message: 'Não foi possível abrir o relatório.', tone: 'info', detail: 'Permita pop-ups para este site e tente novamente.' });
   };
 
-  const summaries = useMemo(() => {
-    const grouped = new Map<string, InventorySummary>();
-
-    filteredItems.forEach((item) => {
-      const current = grouped.get(item.description) ?? {
-        description: item.description,
-        type: item.type,
-        total: 0,
-        stateCounts: {},
-      };
-
-      current.total += 1;
-      current.stateCounts[item.state] = (current.stateCounts[item.state] ?? 0) + 1;
-      grouped.set(item.description, current);
-    });
-
-    return Array.from(grouped.values()).sort((first, second) => second.total - first.total);
-  }, [filteredItems]);
-
   const syncFiltersToUrl = (changes: Partial<InventoryFilters> = {}) => {
     onFilterChange({
       query: changes.query ?? query,
@@ -725,14 +666,12 @@ function InventoryPage({
   const handleQueryChange = (value: string) => {
     setQuery(value);
     setSuggestionsOpen(value.trim().length >= 3);
-    setSummaryVisible(false);
     syncFiltersToUrl({ query: value });
   };
 
   const selectSuggestion = (description: string) => {
     setQuery(description);
     setSuggestionsOpen(false);
-    setSummaryVisible(false);
     syncFiltersToUrl({ query: description });
   };
 
@@ -743,7 +682,6 @@ function InventoryPage({
     setStateFilters([]);
     setOperationalStatusFilters([]);
     setSuggestionsOpen(false);
-    setSummaryVisible(false);
     onFilterChange(null);
   };
 
@@ -770,7 +708,6 @@ function InventoryPage({
     setOperationalStatusFilters(roleSafeFilters?.operationalStatuses ?? []);
     setVisibleColumns(roleSafeColumns);
     setVisibleGroupColumns(roleSafeGroupColumns);
-    setSummaryVisible(false);
     setSuggestionsOpen(false);
     if (selectedDescription !== null) {
       onBackToInventory(roleSafeFilters);
@@ -854,7 +791,7 @@ function InventoryPage({
               label="Tipo"
               selectedValues={typeFilters}
               options={availableTypes.map((type) => ({ value: type, label: getTypeLabel(type) }))}
-              onChange={(values) => { setTypeFilters(values); setSummaryVisible(false); syncFiltersToUrl({ types: values }); }}
+              onChange={(values) => { setTypeFilters(values); syncFiltersToUrl({ types: values }); }}
             />
             <FilterDropdown
               id="inventory-status-filter"
@@ -864,7 +801,6 @@ function InventoryPage({
               onChange={(values) => {
                 const nextStatuses = values as ItemStatus[];
                 setStatusFilters(nextStatuses);
-                setSummaryVisible(false);
                 syncFiltersToUrl({ statuses: nextStatuses });
               }}
             />
@@ -873,7 +809,7 @@ function InventoryPage({
               label="Estado"
               selectedValues={stateFilters}
               options={itemStates.map((state) => ({ value: state, label: stateLabels[state] }))}
-              onChange={(values) => { const nextStates = values as ItemState[]; setStateFilters(nextStates); setSummaryVisible(false); syncFiltersToUrl({ states: nextStates }); }}
+              onChange={(values) => { const nextStates = values as ItemState[]; setStateFilters(nextStates); syncFiltersToUrl({ states: nextStates }); }}
             />
             <FilterDropdown
               id="inventory-operational-status-filter"
@@ -883,7 +819,6 @@ function InventoryPage({
               onChange={(values) => {
                 const nextOperationalStatuses = values as OperationalStatus[];
                 setOperationalStatusFilters(nextOperationalStatuses);
-                setSummaryVisible(false);
                 syncFiltersToUrl({ operationalStatuses: nextOperationalStatuses });
               }}
             />
@@ -891,25 +826,6 @@ function InventoryPage({
           </div>
         </div>
       </section>
-
-      {selectedDescription === null && summaryVisible && (
-        <section aria-label="Resumo da busca" aria-live="polite" className="mt-5">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Resumo da busca</p>
-              <p className="mt-1 text-sm text-slate-500">Distribuição dos resultados por descrição e condição operacional.</p>
-            </div>
-            <span className="hidden text-xs font-medium text-slate-400 sm:block">{formatQuantity(filteredItems.length)} item(ns) considerado(s)</span>
-          </div>
-          {summaries.length > 0 ? (
-            <div className="mt-3 grid gap-4 xl:grid-cols-2">
-              {summaries.map((summary) => <InventorySummaryCard key={`${summary.type}-${summary.description}`} summary={summary} />)}
-            </div>
-          ) : (
-            <p className="mt-3 rounded-md border border-slate-200 bg-white px-4 py-5 text-sm text-slate-500">Nenhum resultado corresponde à busca e aos filtros aplicados.</p>
-          )}
-        </section>
-      )}
 
       <section aria-label="Bens cadastrados" className="mt-3 min-w-0 sm:mt-5">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2 sm:mb-3 sm:gap-3">
@@ -920,19 +836,7 @@ function InventoryPage({
               <span className="hidden sm:inline">{selectedDescription === null ? `${formatQuantity(groups.length)} descrição(ões) · ${formatQuantity(filteredItems.length)} patrimônio(s) filtrado(s) de ${formatQuantity(visibleItems.length)} visível(is).` : 'Detalhes individuais e histórico de movimentações'}</span>
             </p>
           </div>
-          {selectedDescription === null ? (
-            <Button
-              type="button"
-              variant="secondary"
-              aria-pressed={summaryVisible}
-              onClick={() => { setSummaryVisible((current) => !current); setSuggestionsOpen(false); }}
-              disabled={!hasFilters}
-              className="min-h-9 px-3 py-1.5 text-xs"
-            >
-              <Icon name="archive" className="h-3.5 w-3.5" />
-              {summaryVisible ? 'Ocultar resumo' : 'Fazer resumo'}
-            </Button>
-          ) : (
+          {selectedDescription !== null && (
             <div ref={setDetailColumnControlTarget} className="shrink-0" />
           )}
         </div>
